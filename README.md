@@ -446,7 +446,7 @@ We will complete one milestone at a time and pause after each one for review. Th
 | 1 | Product blueprint: UX, flows, architecture, folder structure | Complete in this README |
 | 2 | Project scaffold and design system only | Complete |
 | 3 | Home page with the two service choices | Complete |
-| 4 | Civic reporting form and local report storage | Pending |
+| 4 | Civic reporting form and local report storage | Complete |
 | 5 | Emergency page with instant local safety detection | Pending |
 | 6 | Free-AI analysis with a reliable fallback | Pending |
 | 7 | Complaint, routing preview, and email-ready workflow | Pending |
@@ -488,7 +488,27 @@ The landing page now delivers the product's primary decision clearly:
 
 The service links are intentionally routed to `/report` and `/emergency`, which are the next two planned workflows. Those routes will be implemented in Steps 4 and 5.
 
-**Current stopping point:** Step 3. Civic reporting, emergency workflow, AI, email routing, and dashboard behavior have not been built yet.
+### Step 4 delivery notes
+
+The civic reporting workflow now includes:
+
+- A `/report` page with a mobile-friendly civic issue form.
+- Natural-language issue description, location/landmark, time or duration, affected people/area, optional image filename capture, and extra details.
+- Zod + React Hook Form validation that keeps required report details useful without asking for unnecessary personal information.
+- Browser-local report persistence through `localStorage`.
+- Local report IDs in the `CS-YYYY-0001` format.
+- Saved reports marked as `Ready to Analyze`, keeping AI analysis, complaint generation, email routing, emergency interruption, and dashboard publishing separate for later milestones.
+- A local saved-report confirmation panel and stored-report count.
+
+### Step 4 verification
+
+The Step 4 implementation has passed the following checks:
+
+- `npm.cmd run typecheck`
+- `npm.cmd run lint`
+- `npm.cmd run build`
+
+**Current stopping point:** Step 4. Emergency workflow, AI, email routing, complaint generation, and dashboard behavior have not been built yet.
 
 ## MVP Boundary
 

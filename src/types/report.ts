@@ -124,4 +124,6 @@ export interface EmergencyReport {
   isSafe: boolean;
   createdAt: string;
   distanceMeters?: number;
+  priority?: UrgencyLevel;
+  priorityReason?: string;
 }

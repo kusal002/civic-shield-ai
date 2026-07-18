@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 
 import { EmergencyAlertMarquee } from "@/components/emergency/emergency-alert-marquee";
 import { PwaRegister } from "@/components/shared/pwa-register";
@@ -26,6 +26,9 @@ export const metadata: Metadata = {
     ],
     apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
+};
+
+export const viewport: Viewport = {
   themeColor: "#076b5a",
 };
 

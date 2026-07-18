@@ -25,13 +25,13 @@ export function DashboardWorkspace() {
 
   useEffect(() => {
     if (!coordinates) return;
-    const { latitude, longitude } = coordinates;
+    const currentCoordinates = coordinates;
     const controller = new AbortController();
 
     async function loadReports() {
       setStatus("loading");
       try {
-        const response = await fetch(`/api/public-reports?lat=${latitude}&lon=${longitude}&radiusKm=10`, { signal: controller.signal });
+        const response = await fetch(`/api/public-reports?lat=${currentCoordinates.latitude}&lon=${currentCoordinates.longitude}&radiusKm=10`, { signal: controller.signal });
         const payload = await response.json() as { reports?: PublicCivicReport[]; error?: string };
         if (!response.ok) throw new Error(payload.error ?? "Reports could not be loaded.");
         setReports(payload.reports ?? []);
@@ -50,12 +50,12 @@ export function DashboardWorkspace() {
 
   useEffect(() => {
     if (!coordinates) return;
-    const { latitude, longitude } = coordinates;
+    const currentCoordinates = coordinates;
     const controller = new AbortController();
 
     async function loadLocationName() {
       try {
-        const response = await fetch(`/api/geocode?lat=${latitude}&lon=${longitude}`, { signal: controller.signal });
+        const response = await fetch(`/api/geocode?lat=${currentCoordinates.latitude}&lon=${currentCoordinates.longitude}`, { signal: controller.signal });
         const payload = await response.json() as { label?: string };
         if (response.ok && payload.label) setLocationLabel(payload.label);
       } catch {
@@ -182,7 +182,7 @@ function StatusBadge({ status }: { status: ReportStatus }) {
 }
 
 function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return <Card className="rounded-2xl"><CardContent className="flex items-center gap-3 p-5"><span className="grid size-10 place-items-center rounded-xl bg-brand-soft text-brand">{icon}</span><div><p className="text-xs font-bold uppercase tracking-[0.1em] text-muted">{label}</p><p className="mt-1 font-display text-2xl font-bold">{value}</p></div></CardContent></Card>;
+  return <Card className="rounded-2xl"><CardContent className="flex items-center gap-3 p-5"><span className="grid size-10 place-items-center rounded-xl bg-brand-soft text-brand">{icon}</span><div><p className="text-xs font-bold uppercase tracking-widest text-muted">{label}</p><p className="mt-1 font-display text-2xl font-bold">{value}</p></div></CardContent></Card>;
 }
 
 function EmptyState({ action, title, detail }: { action?: React.ReactNode; title: string; detail: string }) {

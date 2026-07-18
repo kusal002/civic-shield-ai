@@ -39,12 +39,12 @@ export function LocationSafetySnapshot({ compact = false }: { compact?: boolean 
 
   useEffect(() => {
     if (!coordinates) return;
-    const { latitude, longitude } = coordinates;
+    const currentCoordinates = coordinates;
     const controller = new AbortController();
 
     async function loadLocationName() {
       try {
-        const response = await fetch(`/api/geocode?lat=${latitude}&lon=${longitude}`, { signal: controller.signal });
+        const response = await fetch(`/api/geocode?lat=${currentCoordinates.latitude}&lon=${currentCoordinates.longitude}`, { signal: controller.signal });
         const payload = await response.json() as { label?: string };
         if (response.ok && payload.label) setLocationLabel(payload.label);
       } catch {
@@ -58,15 +58,15 @@ export function LocationSafetySnapshot({ compact = false }: { compact?: boolean 
 
   useEffect(() => {
     if (!coordinates) return;
-    const { latitude, longitude } = coordinates;
+    const currentCoordinates = coordinates;
     const controller = new AbortController();
 
     async function loadNearbySignals() {
       setStatus("loading");
       try {
         const [civicResponse, emergencyResponse] = await Promise.all([
-          fetch(`/api/public-reports?lat=${latitude}&lon=${longitude}&radiusKm=5`, { signal: controller.signal }),
-          fetch(`/api/emergency-reports?lat=${latitude}&lon=${longitude}&radiusKm=5`, { signal: controller.signal }),
+          fetch(`/api/public-reports?lat=${currentCoordinates.latitude}&lon=${currentCoordinates.longitude}&radiusKm=5`, { signal: controller.signal }),
+          fetch(`/api/emergency-reports?lat=${currentCoordinates.latitude}&lon=${currentCoordinates.longitude}&radiusKm=5`, { signal: controller.signal }),
         ]);
         const civicPayload = await civicResponse.json() as { reports?: PublicCivicReport[] };
         const emergencyPayload = await emergencyResponse.json() as { reports?: EmergencyReport[] };

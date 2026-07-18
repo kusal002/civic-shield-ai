@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardCheck, Copy, FileText, Home, LoaderCircle, Mail, MapPin, RefreshCw, Send, ShieldAlert, Sparkles } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Building2, CheckCircle2, ClipboardCheck, Copy, FileText, Home, LoaderCircle, Mail, MapPin, Phone, RefreshCw, Send, ShieldAlert, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -8,9 +8,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { getLocalAttachmentFiles } from "@/lib/storage/attachments";
-import { findDepartmentContact } from "@/lib/data/department-directory";
 import { getLocalReport, markReportEmailSent, saveReportAnalysis } from "@/lib/storage/reports";
 import type { CivicReport, SafetyAnalysis } from "@/types/report";
+
+type SuggestedDepartment = {
+  name: string;
+  address: string;
+  phone?: string;
+  distanceMeters?: number;
+  mapsUrl?: string;
+};
 
 export function AnalysisWorkspace({ reportId }: { reportId: string }) {
   const [report, setReport] = useState<CivicReport | null>(null);
@@ -77,7 +84,7 @@ export function AnalysisWorkspace({ reportId }: { reportId: string }) {
         {isEmergency ? <section className="mt-6 rounded-3xl border border-[#efbdb6] bg-[#fff4f1] p-6 sm:p-8"><div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"><div><Badge tone="urgent" className="gap-1.5"><ShieldAlert aria-hidden="true" size={14} /> Possible immediate danger</Badge><h1 className="mt-4 font-display text-3xl font-bold tracking-tight">Move to safety. Do not wait for a report.</h1><p className="mt-2 max-w-2xl leading-7 text-[#7e342d]">This analysis suggests an immediate safety risk. Call emergency services first, then return only when it is safe.</p></div><Button asChild variant="danger" size="lg"><a href="tel:112">Call 112 now</a></Button></div></section> : null}
         <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_25rem]">
           <div className="space-y-6">
-            <Card className="overflow-hidden rounded-3xl"><CardHeader className="border-b border-line bg-[#fbfdfc] p-6 sm:p-8"><div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div><p className="eyebrow">AI-assisted safety brief</p><h1 className="mt-3 font-display text-3xl font-bold tracking-tight sm:text-4xl">{analysis.category}</h1><p className="mt-3 max-w-2xl leading-7 text-muted">{analysis.riskSummary}</p></div><UrgencyBadge urgency={analysis.urgency} /></div></CardHeader><CardContent className="grid gap-5 p-6 sm:grid-cols-2 sm:p-8"><InfoBlock icon={<MapPin aria-hidden="true" size={18} />} label="Confirmed location" value={report.incidentLocation?.label ?? report.location} /><InfoBlock icon={<ClipboardCheck aria-hidden="true" size={18} />} label="Suggested department" value={analysis.route.name} /><InfoBlock icon={<FileText aria-hidden="true" size={18} />} label="Attachments saved locally" value={`${report.attachments?.length ?? 0} file(s) on this device`} /><InfoBlock icon={<Sparkles aria-hidden="true" size={18} />} label="Analysis source" value={analysis.generatedBy === "groq" ? "Groq free-tier AI" : "Local safety fallback"} /></CardContent></Card>
+            <Card className="overflow-hidden rounded-3xl"><CardHeader className="border-b border-line bg-[#fbfdfc] p-6 sm:p-8"><div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div><p className="eyebrow">AI-assisted safety brief</p><h1 className="mt-3 font-display text-3xl font-bold tracking-tight sm:text-4xl">{analysis.category}</h1><p className="mt-3 max-w-2xl leading-7 text-muted">{analysis.riskSummary}</p></div><UrgencyBadge urgency={analysis.urgency} /></div></CardHeader><CardContent className="grid gap-5 p-6 sm:grid-cols-2 sm:p-8"><InfoBlock icon={<MapPin aria-hidden="true" size={18} />} label="Confirmed location" value={report.incidentLocation?.label ?? report.location} /><InfoBlock icon={<ClipboardCheck aria-hidden="true" size={18} />} label="Department type" value={analysis.route.name} /><InfoBlock icon={<FileText aria-hidden="true" size={18} />} label="Attachments saved locally" value={`${report.attachments?.length ?? 0} file(s) on this device`} /><InfoBlock icon={<Sparkles aria-hidden="true" size={18} />} label="Analysis source" value={analysis.generatedBy === "groq" ? "Groq free-tier AI" : "Local safety fallback"} /></CardContent></Card>
 
             <Card className="rounded-3xl"><CardContent className="p-6 sm:p-8"><p className="eyebrow">What to do now</p><div className="mt-5 space-y-3">{analysis.immediateActions.map((action) => <div key={action} className="flex gap-3 rounded-2xl border border-line bg-[#fbfdfc] p-4 text-sm leading-6"><CheckCircle2 aria-hidden="true" className="mt-0.5 shrink-0 text-brand" size={17} />{action}</div>)}</div></CardContent></Card>
 
@@ -85,7 +92,7 @@ export function AnalysisWorkspace({ reportId }: { reportId: string }) {
 
             <MailComposer key={analysis.emailBody} analysis={analysis} report={report} reportId={report.id} onRegenerate={() => void generateReport(report, Date.now())} />
           </div>
-          <aside className="space-y-5"><Card className="rounded-3xl"><CardContent className="p-6"><p className="eyebrow">Report reference</p><p className="mt-2 font-display text-2xl font-bold">{report.id}</p><p className="mt-4 text-sm leading-6 text-muted">Saved locally on {new Date(report.createdAt).toLocaleString()}.</p></CardContent></Card><Card className="rounded-3xl border-[#ead9b8] bg-[#fffaf0]"><CardContent className="p-6"><Badge tone="caution" className="gap-1.5"><AlertTriangle aria-hidden="true" size={14} /> Honest routing</Badge><p className="mt-4 text-sm leading-6 text-[#725019]">CivicShield can prefill a source-tracked address only where its directory has a verified match. You can always correct the recipient before sending; a sent email is not proof that a department has acted.</p></CardContent></Card></aside>
+          <aside className="space-y-5"><Card className="rounded-3xl"><CardContent className="p-6"><p className="eyebrow">Report reference</p><p className="mt-2 font-display text-2xl font-bold">{report.id}</p><p className="mt-4 text-sm leading-6 text-muted">Saved locally on {new Date(report.createdAt).toLocaleString()}.</p></CardContent></Card><Card className="rounded-3xl border-[#ead9b8] bg-[#fffaf0]"><CardContent className="p-6"><Badge tone="caution" className="gap-1.5"><AlertTriangle aria-hidden="true" size={14} /> Honest routing</Badge><p className="mt-4 text-sm leading-6 text-[#725019]">CivicShield shows a dynamic nearby department suggestion for context. In hackathon mode, the actual email goes to the configured CivicShield inbox, and a sent email is not proof that any authority has acted.</p></CardContent></Card></aside>
         </div>
       </div>
     </main>
@@ -93,8 +100,8 @@ export function AnalysisWorkspace({ reportId }: { reportId: string }) {
 }
 
 function MailComposer({ analysis, onRegenerate, report, reportId }: { analysis: SafetyAnalysis; onRegenerate: () => void; report: CivicReport; reportId: string }) {
-  const departmentContact = findDepartmentContact(report, analysis.route);
-  const [recipient, setRecipient] = useState(() => departmentContact?.email ?? "");
+  const [departments, setDepartments] = useState<SuggestedDepartment[]>([]);
+  const [departmentStatus, setDepartmentStatus] = useState<"idle" | "loading" | "ready">("idle");
   const [subject, setSubject] = useState(analysis.emailSubject);
   const [body, setBody] = useState(analysis.emailBody);
   const [confirmed, setConfirmed] = useState(false);
@@ -114,32 +121,45 @@ function MailComposer({ analysis, onRegenerate, report, reportId }: { analysis: 
     return () => { active = false; };
   }, []);
 
+  useEffect(() => {
+    const location = report.incidentLocation;
+    if (!location) return;
+    const controller = new AbortController();
+    setDepartmentStatus("loading");
+    void fetch(`/api/department-nearby?lat=${location.latitude}&lon=${location.longitude}&category=${encodeURIComponent(analysis.route.category)}&route=${encodeURIComponent(analysis.route.name)}`, { signal: controller.signal })
+      .then((response) => response.json())
+      .then((data: { departments?: SuggestedDepartment[] }) => setDepartments(data.departments ?? []))
+      .catch(() => setDepartments([]))
+      .finally(() => setDepartmentStatus("ready"));
+    return () => controller.abort();
+  }, [analysis.route.category, analysis.route.name, report.incidentLocation]);
+
   async function copyDraft() {
-    await navigator.clipboard.writeText(`To: ${recipient}\nSubject: ${subject}\n\n${body}`);
+    await navigator.clipboard.writeText(`Subject: ${subject}\n\n${body}`);
     setCopied(true);
   }
 
   async function sendWithGmail() {
-    if (!recipient || !confirmed) return;
-    setSendStatus("Sending through your connected Gmail…");
+    if (!confirmed) return;
+    setSendStatus("Sending to the CivicShield inbox…");
     setIsSending(true);
     try {
       const formData = new FormData();
-      formData.set("to", recipient);
       formData.set("subject", subject);
       formData.set("body", body);
       const attachments = await getLocalAttachmentFiles(reportId);
       attachments.forEach((attachment) => formData.append("attachments", attachment));
       const response = await fetch("/api/send-email", { method: "POST", body: formData });
-      const result = await response.json() as { id?: string; error?: string };
+      const result = await response.json() as { id?: string; deliveredTo?: string; error?: string };
       if (!response.ok) throw new Error(result.error ?? "Email could not be sent.");
-      const savedDelivery = markReportEmailSent(reportId, { messageId: result.id, recipient });
+      const deliveryRecipient = result.deliveredTo ?? "CivicShield inbox";
+      const savedDelivery = markReportEmailSent(reportId, { messageId: result.id, recipient: deliveryRecipient });
       void fetch(`/api/reports/${encodeURIComponent(reportId)}/delivery`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messageId: result.id, recipient }),
+        body: JSON.stringify({ messageId: result.id, recipient: deliveryRecipient }),
       });
-      setDelivery({ id: result.id, recipient, sentAt: savedDelivery?.emailDelivery?.sentAt });
+      setDelivery({ id: result.id, recipient: deliveryRecipient, sentAt: savedDelivery?.emailDelivery?.sentAt });
       setSendStatus("");
     } catch (error) {
       setSendStatus(error instanceof Error ? error.message : "Email could not be sent.");
@@ -148,14 +168,14 @@ function MailComposer({ analysis, onRegenerate, report, reportId }: { analysis: 
     }
   }
 
-  const disabled = !recipient || !confirmed || isSending;
+  const disabled = !confirmed || isSending;
   if (delivery) {
     return <Card className="rounded-3xl border-[#c7e7dc] bg-[#fbfefc]">
       <CardContent className="p-6 sm:p-8">
         <span className="grid size-12 place-items-center rounded-2xl bg-brand-soft text-brand"><CheckCircle2 aria-hidden="true" size={25} /></span>
         <p className="mt-5 eyebrow">Delivery recorded</p>
         <h2 className="mt-2 font-display text-2xl font-bold tracking-tight">Your report email has been handed to Gmail.</h2>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">{delivery.recipient ? <>CivicShield sent the confirmed email to <strong className="text-ink">{delivery.recipient}</strong> and marked this report as </> : <>CivicShield found a previously recorded successful send and marked this report as </>}<strong className="text-ink">delivery confirmed</strong> on this device.</p>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">{delivery.recipient ? <>CivicShield sent the confirmed email to the <strong className="text-ink">{delivery.recipient}</strong> and marked this report as </> : <>CivicShield found a previously recorded successful send and marked this report as </>}<strong className="text-ink">delivery confirmed</strong> on this device.</p>
         <div className="mt-5 rounded-2xl border border-[#c7e7dc] bg-white p-4 text-sm leading-6 text-muted">
           <p><strong className="text-ink">What this confirms:</strong> Gmail accepted the message for delivery.</p>
           <p className="mt-2"><strong className="text-ink">What it does not confirm:</strong> that the department has inspected, acted on, or resolved the issue. Keep the report reference and follow up if no acknowledgement arrives.</p>
@@ -172,29 +192,56 @@ function MailComposer({ analysis, onRegenerate, report, reportId }: { analysis: 
   return (
     <Card className="rounded-3xl border-[#c7e7dc]">
       <CardHeader className="p-6 pb-0 sm:p-8 sm:pb-0">
-        <p className="eyebrow">Department email draft</p>
-        <h2 className="mt-2 font-display text-2xl font-bold tracking-tight">Review before you send</h2>
-        <p className="mt-2 text-sm leading-6 text-muted">CivicShield selected <strong>{analysis.route.name}</strong>. {departmentContact ? "A verified directory match is prefilled below; review it before approval." : "No verified directory match is available for this place, so add an official recipient before approval."}</p>
+        <p className="eyebrow">Dynamic routing preview</p>
+        <h2 className="mt-2 font-display text-2xl font-bold tracking-tight">Nearest relevant department</h2>
+        <p className="mt-2 text-sm leading-6 text-muted">CivicShield uses the AI category and selected incident location to find a nearby relevant office. For the hackathon demo, the final email is delivered to the CivicShield inbox in the background.</p>
       </CardHeader>
       <CardContent className="space-y-4 p-6 sm:p-8">
-        <label className="block text-sm font-bold text-ink">Official department email<input className="mt-2 h-12 w-full rounded-xl border border-line bg-white px-3 text-sm font-normal focus:border-brand focus:outline-none" value={recipient} onChange={(event) => setRecipient(event.target.value)} placeholder="verified-department@example.gov.in" type="email" /></label>
-        {departmentContact ? <p className="rounded-xl border border-[#c7e7dc] bg-brand-soft px-3 py-2 text-xs leading-5 text-[#215c50]">Prefilled for <strong>{departmentContact.authority}</strong>; verified {departmentContact.lastVerified}. <a className="font-semibold underline" href={departmentContact.sourceUrl} rel="noreferrer" target="_blank">View official source</a></p> : null}
+        <DepartmentSuggestion departments={departments} status={departmentStatus} fallbackName={analysis.route.name} />
         <label className="block text-sm font-bold text-ink">Subject<input className="mt-2 h-12 w-full rounded-xl border border-line bg-white px-3 text-sm font-normal focus:border-brand focus:outline-none" value={subject} onChange={(event) => setSubject(event.target.value)} /></label>
         <label className="block text-sm font-bold text-ink">Message<textarea className="mt-2 min-h-64 w-full rounded-xl border border-line bg-white px-3 py-3 text-sm font-normal leading-6 focus:border-brand focus:outline-none" value={body} onChange={(event) => setBody(event.target.value)} /></label>
         <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={onRegenerate}><RefreshCw aria-hidden="true" size={16} /> Generate another draft</Button><Button type="button" variant="outline" onClick={copyDraft}><Copy aria-hidden="true" size={16} /> {copied ? "Copied" : "Copy draft"}</Button></div>
-        <label className="flex gap-3 rounded-2xl border border-line bg-[#fbfdfc] p-4 text-sm leading-6 text-muted"><input className="mt-1 size-4 accent-[#076b5a]" type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />I have checked the recipient and final message. I authorize CivicShield to send this exact email from my connected Gmail account.</label>
+        <label className="flex gap-3 rounded-2xl border border-line bg-[#fbfdfc] p-4 text-sm leading-6 text-muted"><input className="mt-1 size-4 accent-[#076b5a]" type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />I have checked the final message. I authorize CivicShield to send this report to the configured inbox for demo review.</label>
         <div className="pt-2">
-          {gmailStatus === "connected" ? <Button className="w-full sm:w-auto" type="button" size="lg" disabled={disabled} onClick={() => void sendWithGmail()}><Send aria-hidden="true" size={18} /> {isSending ? "Sending confirmed email…" : ownerConfigured ? "Confirm and send from CivicShield Gmail" : "Confirm and send from Gmail"}</Button> : <Button asChild className="w-full sm:w-auto" size="lg" disabled={gmailStatus === "checking"}><Link href={`/api/auth/gmail/connect?returnTo=${encodeURIComponent(`/analysis/${reportId}`)}`}><Mail aria-hidden="true" size={18} /> {gmailStatus === "checking" ? "Checking Gmail…" : "Connect Gmail to send"}</Link></Button>}
+          {gmailStatus === "connected" ? <Button className="w-full sm:w-auto" type="button" size="lg" disabled={disabled} onClick={() => void sendWithGmail()}><Send aria-hidden="true" size={18} /> {isSending ? "Sending report…" : ownerConfigured ? "Send to CivicShield inbox" : "Send to CivicShield inbox"}</Button> : <Button asChild className="w-full sm:w-auto" size="lg" disabled={gmailStatus === "checking"}><Link href={`/api/auth/gmail/connect?returnTo=${encodeURIComponent(`/analysis/${reportId}`)}`}><Mail aria-hidden="true" size={18} /> {gmailStatus === "checking" ? "Checking Gmail…" : "Connect Gmail sender"}</Link></Button>}
         </div>
         {sendStatus ? <p className="rounded-xl bg-brand-soft px-3 py-2 text-sm font-medium text-brand" role="status">{sendStatus}</p> : null}
-        <p className="text-xs leading-5 text-muted">{ownerConfigured ? "This email and its locally saved evidence files will be sent from the CivicShield project Gmail account after your confirmation." : "Connect Gmail to send the message and its locally saved evidence files directly."}</p>
+        <p className="text-xs leading-5 text-muted">{ownerConfigured ? "This email and its locally saved evidence files will be sent from the CivicShield Gmail account ." : "Connect Gmail to send the message and its locally saved evidence files to the ."}</p>
       </CardContent>
     </Card>
   );
 }
 
+function DepartmentSuggestion({ departments, fallbackName, status }: { departments: SuggestedDepartment[]; fallbackName: string; status: "idle" | "loading" | "ready" }) {
+  const firstDepartment = departments[0];
+  if (status === "loading") {
+    return <div className="rounded-2xl border border-line bg-[#fbfdfc] p-4 text-sm font-semibold text-muted">Finding the nearest relevant department near the selected location...</div>;
+  }
+  if (!firstDepartment) {
+    return <div className="rounded-2xl border border-[#ead9b8] bg-[#fffaf0] p-4 text-sm leading-6 text-[#725019]"><p className="font-bold">Suggested department type: {fallbackName}</p><p className="mt-1">Google Places did not return a nearby office for this location. The complaint is still dropped to the CivicShield inbox.</p></div>;
+  }
+  return (
+    <div className="rounded-2xl border border-[#c7e7dc] bg-brand-soft p-4">
+      <div className="flex items-start gap-3">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-brand"><Building2 aria-hidden="true" size={18} /></span>
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-[0.1em] text-brand">Nearest dynamic match</p>
+          <h3 className="mt-1 font-display text-lg font-bold text-ink">{firstDepartment.name}</h3>
+          <p className="mt-1 text-sm leading-6 text-[#31544b]">{firstDepartment.address}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {typeof firstDepartment.distanceMeters === "number" ? <Badge tone="safe">{formatDistance(firstDepartment.distanceMeters)}</Badge> : null}
+            {firstDepartment.phone ? <a className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs font-bold text-brand" href={`tel:${firstDepartment.phone.replace(/[^\d+]/g, "")}`}><Phone aria-hidden="true" size={13} /> {firstDepartment.phone}</a> : null}
+            {firstDepartment.mapsUrl ? <a className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs font-bold text-brand underline" href={firstDepartment.mapsUrl} rel="noreferrer" target="_blank"><MapPin aria-hidden="true" size={13} /> Open map</a> : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function UrgencyBadge({ urgency }: { urgency: SafetyAnalysis["urgency"] }) { const tone = urgency === "critical" || urgency === "high" ? "urgent" : urgency === "medium" ? "caution" : "safe"; return <Badge tone={tone}>{urgency} urgency</Badge>; }
 function InfoBlock({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) { return <div className="flex gap-3"><span className="mt-0.5 text-brand">{icon}</span><div><p className="text-xs font-bold uppercase tracking-[0.11em] text-muted">{label}</p><p className="mt-1 text-sm font-semibold leading-6 text-ink">{value}</p></div></div>; }
+function formatDistance(distanceMeters: number) { return distanceMeters < 1000 ? `${distanceMeters} m away` : `${(distanceMeters / 1000).toFixed(1)} km away`; }
 function CopyButton({ text }: { text: string }) { const [copied, setCopied] = useState(false); return <Button type="button" size="sm" variant="outline" onClick={async () => { await navigator.clipboard.writeText(text); setCopied(true); }}>{copied ? "Copied" : <><Copy aria-hidden="true" size={14} /> Copy</>}</Button>; }
 function LoadingState() { return <main className="grid min-h-screen place-items-center bg-canvas p-6"><div className="text-center"><LoaderCircle className="mx-auto animate-spin text-brand" size={32} /><p className="mt-4 font-display text-xl font-bold">Preparing your civic safety brief…</p><p className="mt-2 text-sm text-muted">This uses Groq when a free API key is configured, with a local fallback for reliability.</p></div></main>; }
 function MissingState({ message }: { message: string }) { return <main className="grid min-h-screen place-items-center bg-canvas p-6"><Card className="max-w-lg rounded-3xl"><CardContent className="p-8"><AlertTriangle className="text-danger" size={28} /><h1 className="mt-4 font-display text-2xl font-bold">Report unavailable</h1><p className="mt-3 leading-7 text-muted">{message}</p><Button asChild className="mt-6"><Link href="/report">Create a report</Link></Button></CardContent></Card></main>; }

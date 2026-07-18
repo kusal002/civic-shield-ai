@@ -1,5 +1,5 @@
-import { EmergencyAssistance } from "@/components/emergency/emergency-assistance";
+import { EmergencyAssistanceSlot } from "@/components/emergency/emergency-assistance-slot";
 
 export default function EmergencyPage() {
-  return <EmergencyAssistance />;
+  return <EmergencyAssistanceSlot />;
 }

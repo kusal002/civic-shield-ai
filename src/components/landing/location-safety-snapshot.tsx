@@ -98,7 +98,7 @@ export function LocationSafetySnapshot({ compact = false }: { compact?: boolean 
   }, [isNewPlace, status, totalSignals]);
 
   return (
-    <section className={`relative overflow-hidden rounded-[1.75rem] border bg-white shadow-surface ${compact ? "border-line p-5" : "border-white/80"}`}>
+    <section className={`relative overflow-hidden rounded-[1.75rem] border bg-white shadow-surface ${compact ? "border-line p-5" : "max-h-[44rem] border-white/80"}`}>
       <div className="absolute right-0 top-0 h-32 w-32 rounded-bl-full bg-[#ddf5ed]" />
       <div className={compact ? "" : "border-b border-line bg-[#fbfdfc] px-6 py-5"}>
         <div className="relative flex items-start justify-between gap-4">
@@ -155,11 +155,11 @@ export function LocationSafetySnapshot({ compact = false }: { compact?: boolean 
           </div>
         )}
 
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Button asChild className="flex-1">
+        <div className="grid grid-cols-2 gap-2">
+          <Button asChild className="min-w-0 px-2 text-xs sm:px-3 sm:text-sm">
             <Link href="/dashboard"><Sparkles aria-hidden="true" size={16} /> Open safety dashboard</Link>
           </Button>
-          <Button asChild className="flex-1 bg-[#a22a58] hover:bg-[#872047]">
+          <Button asChild className="min-w-0 px-2 text-xs sm:px-3 sm:text-sm bg-[#a22a58] hover:bg-[#872047]">
             <Link href="/emergency?type=women"><Venus aria-hidden="true" size={16} /> Women safety</Link>
           </Button>
         </div>

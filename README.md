@@ -693,6 +693,22 @@ The destructive delete action uses a CivicShield in-app confirmation modal rathe
 - A feedback form above the footer delivers messages to both project-team inboxes using the configured CivicShield Gmail sender. It is rate limited and does not expose recipient email addresses in the UI.
 - The report page has a clear `Back to home` link above the form, and the moderator custom-date filter now uses an in-app calendar popover.
 
+### Emergency moderation merge — 19 July 2026
+
+- The moderator workspace now has separate **Emergency reports** and **Civic reports** tabs. Emergency records show safety state, location, details, coordinates, and a map link when coordinates are available.
+- Civic report moderation retains its city and date-range filters, custom calendar, full private review details, status publishing, and false-report deletion.
+- Recent public emergency signals are prioritized for the site alert layer using the configured Groq model when available, with deterministic local safety prioritisation as a fallback.
+
+### Responsive homepage refinement — 19 July 2026
+
+- The homepage quick incident record can now request the device’s current location, resolve it to a readable label, and save its coordinates with the emergency record.
+- Homepage action controls, safety snapshot actions, and the feedback form have responsive layouts for narrow mobile screens and larger desktop screens.
+- Feedback fields now have labels, accessible focus states, clearer privacy guidance, and a full-width mobile submit action. The shared footer includes a copyright notice.
+
+### Emergency page layout refinement — 19 July 2026
+
+- `/emergency` now presents the quick incident record first, followed by the emergency response controls, nearby help, and the selected safety checklist. The incident form uses a compact responsive layout on mobile and desktop.
+
 Required environment variables are documented in `.env.example`:
 
 ```text

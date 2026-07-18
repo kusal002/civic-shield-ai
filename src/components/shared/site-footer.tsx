@@ -38,5 +38,6 @@ export function SiteFooter() {
         </section>)}
       </div>
     </div>
+    <p className="mx-auto mt-8 max-w-7xl border-t border-line pt-5 text-xs text-muted">© {new Date().getFullYear()} CivicShield AI. Built for the hackathon.</p>
   </footer>;
 }

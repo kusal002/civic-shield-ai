@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FeedbackSection } from "@/components/landing/feedback-section";
 import { LocationSafetySnapshot } from "@/components/landing/location-safety-snapshot";
-import { QuickIncidentRecord } from "@/components/landing/quick-incident-record";
+import { QuickIncidentRecordSlot } from "@/components/landing/quick-incident-record-slot";
 
 const civicSteps = [
   {
@@ -74,23 +74,22 @@ export default function Home() {
         </Button>
       </header>
 
-      <section className="relative mx-auto grid max-w-7xl gap-12 px-5 pb-20 pt-8 lg:grid-cols-[1.05fr_.95fr] lg:px-8 lg:pb-28 lg:pt-12">
+      <section className="relative mx-auto grid max-w-7xl gap-8 px-5 pb-16 pt-8 lg:grid-cols-[1.05fr_.95fr] lg:px-8 lg:pb-20 lg:pt-12">
         <div className="grid gap-4 lg:col-span-2 lg:grid-cols-[1.05fr_.55fr] lg:items-stretch">
-          <QuickIncidentRecord />
+          <QuickIncidentRecordSlot />
           <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 lg:grid-rows-3">
             <Button asChild className="h-full min-h-20 px-5 text-base sm:text-lg" size="lg"><Link href="/report">Report a civic issue <ArrowRight aria-hidden="true" size={19} /></Link></Button>
             <Button asChild className="h-full min-h-20 px-5 text-base sm:text-lg" size="lg" variant="outline"><Link href="/emergency"><Siren aria-hidden="true" size={19} /> I need emergency help</Link></Button>
             <Link className="flex min-h-20 items-center justify-center gap-2 rounded-xl border border-[#f0c6d8] bg-[#fff7fb] px-5 text-center text-base font-bold text-[#9b2755] transition hover:bg-[#ffeaf3] sm:text-lg" href="/emergency?type=women"><Venus aria-hidden="true" size={19} /> Women safety</Link>
           </div>
         </div>
-        <div className="relative z-10 max-w-2xl">
+        <div className="relative z-10 max-w-3xl lg:pl-4">
           <Badge className="gap-1.5" tone="safe">
             <Sparkles aria-hidden="true" size={13} />
             AI-assisted civic action
           </Badge>
-          <h1 className="mt-6 font-display text-5xl font-bold leading-[1.03] tracking-[-0.045em] text-ink sm:text-6xl lg:text-7xl">
-            Feel safer when you
-            <span className="block text-brand">enter a new place.</span>
+          <h1 className="mt-5 font-display text-4xl font-bold leading-[1.08] tracking-[-0.04em] text-ink sm:text-5xl lg:text-6xl">
+            Feel safer when you <span className="text-brand">enter a new place.</span>
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-8 text-muted sm:text-xl">
             CivicShield checks nearby civic complaints and emergency signals, then helps citizens, women, and minors act quickly with location-aware safety support.
@@ -102,13 +101,13 @@ export default function Home() {
             </p>
           </div>
 
-          <p className="mt-4 flex items-center gap-2 text-sm text-muted">
+          <p className="mt-4 flex items-start gap-2 text-sm leading-6 text-muted">
             <CheckCircle2 aria-hidden="true" className="text-brand" size={16} />
             Clear guidance. Citizen-approved action. No false closure claims.
           </p>
         </div>
 
-        <div className="relative mx-auto w-full max-w-lg lg:pt-3">
+        <div className="relative mx-auto w-full max-w-lg lg:pt-0">
           <div className="absolute -right-16 top-14 -z-10 size-56 rounded-full bg-[#d9f1e8] blur-3xl" />
           <LocationSafetySnapshot />
         </div>

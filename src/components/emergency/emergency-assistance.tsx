@@ -270,134 +270,28 @@ export function EmergencyAssistance() {
         </Link>
 
         <section className="pb-12 pt-6 lg:pb-16 lg:pt-10">
-          <div className="rounded-[2rem] border border-[#efc7bf] bg-white p-5 shadow-surface sm:p-7">
-            <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
-              <div>
-                <Badge tone="urgent" className="gap-1.5">
-                  <Siren aria-hidden="true" size={13} /> Quick response
-                </Badge>
-                <h1 className="mt-5 font-display text-4xl font-bold leading-tight tracking-[-0.035em] text-[#251918] sm:text-5xl">
-                  Get help first.
-                </h1>
-                <p className="mt-4 max-w-xl text-base leading-7 text-muted sm:text-lg">
-                  Choose the emergency type, call 112 if there is immediate danger, and use the nearest relevant help shown beside you.
-                </p>
-
-                <a
-                  className="mt-6 flex min-h-20 items-center justify-center gap-3 rounded-2xl bg-danger px-6 py-5 text-center text-xl font-bold text-white shadow-[0_18px_40px_rgb(190_59_49_/_24%)] transition hover:bg-[#a53129] focus-visible:outline-none sm:text-2xl"
-                  href="tel:112"
-                >
-                  <PhoneCall aria-hidden="true" size={27} /> Call 112 Now
-                </a>
-
-                <LocationPanel coordinates={coordinates} locationLabel={locationLabel} locationStatus={locationStatus} />
+          <Card className="rounded-[1.75rem] border-[#efc7bf] bg-white shadow-surface">
+            <CardContent className="p-5 sm:p-6">
+              <div className="flex flex-col gap-3 border-b border-[#f3ddd8] pb-5 sm:flex-row sm:items-end sm:justify-between">
+                <div><p className="eyebrow text-danger">Emergency note</p><h1 className="mt-2 font-display text-2xl font-bold tracking-tight">Raise a quick incident record</h1><p className="mt-2 text-sm leading-6 text-muted">Record the situation after moving to safety. For immediate danger, call 112 first.</p></div>
+                <Badge tone="urgent">{activeEmergency.label} alert</Badge>
               </div>
-
-              <div className="space-y-4">
-                <div className="rounded-[1.5rem] border border-[#f0d0c9] bg-[#fff8f6] p-4 sm:p-5">
-                  <div className="flex items-start gap-3">
-                    <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[#ffe4df] text-danger">
-                      <ActiveIcon aria-hidden={true} size={22} />
-                    </span>
-                    <div>
-                      <p className="eyebrow text-danger">What is happening?</p>
-                      <h2 className="mt-1 font-display text-xl font-bold">Select one emergency type</h2>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-6">
-                    {emergencyTypes.map((type) => {
-                      const TypeIcon = type.icon;
-                      const active = type.id === selectedType;
-                      return (
-                        <button
-                          className={`flex h-20 flex-col items-center justify-center gap-1.5 rounded-2xl border px-2 text-center text-xs font-bold transition sm:h-24 sm:text-sm ${
-                            active ? "border-danger bg-white text-danger shadow-sm" : "border-[#f0d0c9] bg-white/70 text-[#4d5d59] hover:bg-white"
-                          }`}
-                          key={type.id}
-                          onClick={() => setSelectedType(type.id)}
-                          type="button"
-                        >
-                          <TypeIcon aria-hidden={true} size={21} />
-                          <span>{type.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3 text-sm">
-                  <QuickFact label="1" value="Move safe" />
-                  <QuickFact label="2" value="Call 112" />
-                  <QuickFact label="3" value="Use nearby help" />
-                </div>
+              <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
+                <label className="block"><span className="text-sm font-bold text-[#344540]">Location or landmark</span><span className="mt-2 flex items-center gap-2 rounded-xl border border-line bg-[#fbfdfc] px-3 transition focus-within:border-danger focus-within:ring-4 focus-within:ring-danger/10"><MapPin aria-hidden="true" className="text-muted" size={17} /><input className="h-12 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[#8b9995]" onChange={(event) => setLocation(event.target.value)} placeholder="e.g. Central Market gate 2" value={location} /></span></label>
+                <label className="block"><span className="text-sm font-bold text-[#344540]">Short detail</span><input className="mt-2 h-12 w-full rounded-xl border border-line bg-[#fbfdfc] px-3 text-sm outline-none placeholder:text-[#8b9995] transition focus:border-danger focus:ring-4 focus:ring-danger/10" onChange={(event) => setDetails(event.target.value)} placeholder="One line is enough." value={details} /></label>
+                <Button className="h-12 w-full lg:w-auto" onClick={() => void saveEmergencyNote()} variant="danger"><ShieldAlert aria-hidden="true" size={18} /> Lodge alert</Button>
               </div>
-            </div>
+              <label className="mt-4 flex items-start gap-3 rounded-xl border border-[#f0d0c9] bg-[#fff8f6] p-3 text-sm font-semibold text-[#4c3834]"><input checked={isSafe} className="mt-1 size-4 accent-[#be3b31]" onChange={(event) => setIsSafe(event.target.checked)} type="checkbox" /> I am currently away from immediate danger.</label>
+              {savedReference ? <div className="mt-4 rounded-xl border border-[#cfe6dd] bg-[#f4fbf8] p-4 text-sm text-[#31544b]"><p className="font-bold">Record saved: {savedReference}</p><p className="mt-1 leading-6">This is a CivicShield incident note, not an emergency dispatch confirmation.</p></div> : null}
+            </CardContent>
+          </Card>
+
+          <div className="mt-6 grid gap-6 xl:grid-cols-[0.78fr_1.22fr] xl:items-start">
+            <Card className="rounded-[1.75rem] border-[#efc7bf] bg-white shadow-surface"><CardContent className="p-5 sm:p-6"><div className="flex items-start gap-3"><span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[#ffe4df] text-danger"><ActiveIcon aria-hidden={true} size={22} /></span><div><p className="eyebrow text-danger">What is happening?</p><h2 className="mt-1 font-display text-xl font-bold">Select one emergency type</h2><p className="mt-2 text-sm leading-6 text-muted">This changes the nearby help and safety guidance beside you.</p></div></div><div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-2">{emergencyTypes.map((type) => { const TypeIcon = type.icon; const active = type.id === selectedType; return <button className={`flex h-24 flex-col items-center justify-center gap-2 rounded-2xl border px-2 text-center text-sm font-bold transition ${active ? "border-danger bg-[#fff0ed] text-danger shadow-sm" : "border-[#f0d0c9] bg-[#fffaf8] text-[#4d5d59] hover:bg-white"}`} key={type.id} onClick={() => setSelectedType(type.id)} type="button"><TypeIcon aria-hidden={true} size={21} /><span>{type.label}</span></button>; })}</div></CardContent></Card>
+            <div className="space-y-6"><NearbyHelpPanel activeEmergency={activeEmergency} coordinates={coordinates} nearbyPlaces={nearbyPlaces} nearbyStatus={nearbyStatus} /><Card className="rounded-[1.75rem] border-[#efc7bf] bg-white"><CardContent className="p-5 sm:p-6"><p className="eyebrow text-danger">Safety checklist</p><h2 className="mt-2 font-display text-xl font-bold">{activeEmergency.label} guidance</h2><ul className="mt-5 space-y-3">{checklist.map((step) => <li className="flex gap-3 text-sm leading-6 text-[#475854]" key={step}><CheckCircle2 aria-hidden="true" className="mt-0.5 shrink-0 text-danger" size={17} /><span>{step}</span></li>)}</ul></CardContent></Card></div>
           </div>
 
-          <div className="mt-6 grid gap-6 xl:grid-cols-[1.15fr_0.85fr] xl:items-start">
-            <NearbyHelpPanel activeEmergency={activeEmergency} coordinates={coordinates} nearbyPlaces={nearbyPlaces} nearbyStatus={nearbyStatus} />
-
-            <div className="space-y-6">
-              <Card className="rounded-[1.5rem] border-[#efc7bf] bg-white">
-                <CardContent className="p-5 sm:p-6">
-                  <p className="eyebrow text-danger">Safety checklist</p>
-                  <h2 className="mt-2 font-display text-xl font-bold">{activeEmergency.label} guidance</h2>
-                  <ul className="mt-5 space-y-3">
-                    {checklist.map((step) => (
-                      <li className="flex gap-3 text-sm leading-6 text-[#475854]" key={step}>
-                        <CheckCircle2 aria-hidden="true" className="mt-0.5 shrink-0 text-danger" size={17} />
-                        <span>{step}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-
-              <Card className="rounded-[1.5rem] border-[#efc7bf] bg-white">
-              <CardContent className="p-5 sm:p-6">
-                <p className="eyebrow text-danger">Emergency note</p>
-                <h2 className="mt-2 font-display text-xl font-bold">Raise a quick incident record</h2>
-                <div className="mt-5 grid gap-4">
-                  <label className="block">
-                    <span className="text-sm font-bold text-[#344540]">Location or landmark</span>
-                    <span className="mt-2 flex items-center gap-2 rounded-2xl border border-line bg-[#fbfdfc] px-3">
-                      <MapPin aria-hidden="true" className="text-muted" size={17} />
-                      <input
-                        className="h-12 w-full bg-transparent text-sm outline-none placeholder:text-[#8b9995]"
-                        onChange={(event) => setLocation(event.target.value)}
-                        placeholder="e.g. Central Market gate 2"
-                        value={location}
-                      />
-                    </span>
-                  </label>
-                  <label className="block">
-                    <span className="text-sm font-bold text-[#344540]">Short detail</span>
-                    <input
-                      className="mt-2 h-12 w-full rounded-2xl border border-line bg-[#fbfdfc] px-3 text-sm outline-none placeholder:text-[#8b9995] focus:border-danger"
-                      onChange={(event) => setDetails(event.target.value)}
-                      placeholder="One line is enough."
-                      value={details}
-                    />
-                  </label>
-                  <Button className="h-12 w-full" onClick={() => void saveEmergencyNote()} variant="danger">
-                    <ShieldAlert aria-hidden="true" size={18} /> Lodge alert
-                  </Button>
-                </div>
-                <label className="mt-4 flex items-start gap-3 rounded-2xl border border-[#f0d0c9] bg-[#fff8f6] p-3 text-sm font-semibold text-[#4c3834]">
-                  <input checked={isSafe} className="mt-1 size-4 accent-[#be3b31]" onChange={(event) => setIsSafe(event.target.checked)} type="checkbox" />
-                  I am currently away from immediate danger.
-                </label>
-                {savedReference ? (
-                  <div className="mt-4 rounded-2xl border border-[#cfe6dd] bg-[#f4fbf8] p-4 text-sm text-[#31544b]">
-                    <p className="font-bold">Record saved: {savedReference}</p>
-                    <p className="mt-1 leading-6">This is only a CivicShield incident note. It is not an emergency dispatch confirmation.</p>
-                  </div>
-                ) : null}
-              </CardContent>
-              </Card>
-            </div>
-          </div>
+          <div className="mt-6 rounded-[1.75rem] border border-[#efc7bf] bg-white p-5 shadow-surface sm:p-7"><div className="grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-center"><div><Badge tone="urgent" className="gap-1.5"><Siren aria-hidden="true" size={13} /> Quick response</Badge><h2 className="mt-4 font-display text-3xl font-bold tracking-tight text-[#251918] sm:text-4xl">Get help first.</h2><p className="mt-3 max-w-xl leading-7 text-muted">If there is immediate danger, call 112 now. Your live location is shown below for sharing with responders or trusted contacts.</p><a className="mt-5 flex min-h-16 items-center justify-center gap-3 rounded-2xl bg-danger px-6 py-4 text-lg font-bold text-white shadow-[0_18px_40px_rgb(190_59_49_/_24%)] transition hover:bg-[#a53129]" href="tel:112"><PhoneCall aria-hidden="true" size={23} /> Call 112 Now</a></div><div><LocationPanel coordinates={coordinates} locationLabel={locationLabel} locationStatus={locationStatus} /><div className="mt-4 grid grid-cols-3 gap-3 text-sm"><QuickFact label="1" value="Move safe" /><QuickFact label="2" value="Call 112" /><QuickFact label="3" value="Use nearby help" /></div></div></div></div>
         </section>
       </div>
     </main>

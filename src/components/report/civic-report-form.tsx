@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertTriangle, Clock3, FileText, Info, MapPin, ShieldCheck, Upload } from "lucide-react";
+import { AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, Clock3, FileText, Info, MapPin, ShieldCheck, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
@@ -21,7 +21,7 @@ import type { CivicAttachment, IncidentLocation } from "@/types/report";
 const reportSchema = z.object({
   description: z.string().trim().min(20, "Describe the problem in at least 20 characters.").max(900, "Keep the description under 900 characters for now."),
   location: z.string().trim().min(6, "Confirm a useful location or landmark.").max(180),
-  duration: z.string().trim().min(1, "Select when this issue was noticed.").max(120),
+  duration: z.string().trim().min(1, "Select when this issue was noticed.").max(120).refine(isAllowedIncidentDateTime, "Select a time within the last month and not in the future."),
   affectedPeople: z.string().trim().refine((value) => !value || /^[1-9]\d*$/.test(value), "Enter a whole number greater than zero, or leave this blank.").optional(),
   extraDetails: z.string().trim().max(360).optional(),
 });
@@ -43,8 +43,10 @@ export function CivicReportForm() {
     handleSubmit,
     setError,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<ReportFormValues>({ resolver: zodResolver(reportSchema), defaultValues });
+  const durationValue = watch("duration");
 
   useEffect(() => () => media.forEach((item) => URL.revokeObjectURL(item.url)), [media]);
 
@@ -132,7 +134,8 @@ export function CivicReportForm() {
 
             <div className="grid gap-5 md:grid-cols-2">
               <FormField error={errors.duration?.message} helper="Use the calendar picker to select when the issue was noticed." icon={<Clock3 aria-hidden="true" size={16} />} label="Date and time noticed">
-                <input className="h-12 w-full rounded-2xl border border-line bg-white px-4 text-sm text-ink shadow-sm transition focus:border-brand focus:outline-none" type="datetime-local" {...register("duration")} />
+                <DateTimePicker value={durationValue} onChange={(value) => setValue("duration", value, { shouldDirty: true, shouldValidate: true })} />
+                <input type="hidden" {...register("duration")} />
               </FormField>
               <FormField error={errors.affectedPeople?.message} helper="Optional. We include this in the department email only when a number is provided." label="Number of people affected">
                 <input className="h-12 w-full rounded-2xl border border-line bg-white px-4 text-sm text-ink shadow-sm transition focus:border-brand focus:outline-none" inputMode="numeric" min="1" placeholder="Example: 25" type="number" {...register("affectedPeople")} />
@@ -189,6 +192,197 @@ function parseSavedReportsCount(snapshot: string) {
   try { const reports = JSON.parse(snapshot); return Array.isArray(reports) ? reports.length : 0; } catch { return 0; }
 }
 
+function DateTimePicker({ onChange, value }: { onChange: (value: string) => void; value: string }) {
+  const selected = parseLocalDateTime(value);
+  const today = new Date();
+  const minimum = getMinimumIncidentDate();
+  const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(selected ?? today));
+  const [open, setOpen] = useState(false);
+
+  const days = getCalendarDays(visibleMonth);
+  const selectedDateKey = selected ? toDateKey(selected) : "";
+  const canGoPrevious = startOfMonth(addMonths(visibleMonth, -1)) >= startOfMonth(minimum);
+  const canGoNext = startOfMonth(addMonths(visibleMonth, 1)) <= startOfMonth(today);
+
+  function pickDate(day: Date) {
+    if (isDateDisabled(day, minimum, today)) return;
+    const base = selected ?? new Date();
+    const hour = selected ? base.getHours() : isSameDate(day, today) ? today.getHours() : 9;
+    const minute = selected ? base.getMinutes() : isSameDate(day, today) ? roundDownToFive(today.getMinutes()) : 0;
+    const next = clampIncidentDateTime(new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, minute), minimum, today);
+    onChange(toLocalDateTimeValue(next));
+  }
+
+  function updateTime(part: "hour" | "minute", nextValue: string) {
+    const base = selected ?? today;
+    const next = new Date(base);
+    if (part === "hour") next.setHours(Number(nextValue));
+    if (part === "minute") next.setMinutes(Number(nextValue));
+    next.setSeconds(0, 0);
+    onChange(toLocalDateTimeValue(clampIncidentDateTime(next, minimum, today)));
+  }
+
+  return (
+    <div className="relative">
+      <button
+        className="flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl border border-line bg-white px-4 text-left text-sm font-semibold text-ink shadow-sm transition hover:border-brand focus:border-brand focus:outline-none"
+        onClick={() => setOpen((current) => !current)}
+        type="button"
+      >
+        <span className="flex items-center gap-2">
+          <CalendarDays aria-hidden="true" className="text-brand" size={17} />
+          {selected ? formatIncidentDate(selected) : "Select date and time"}
+        </span>
+        <span className="text-xs font-bold text-muted">Last 30 days</span>
+      </button>
+
+      {open ? (
+        <>
+          <button className="fixed inset-0 z-40 cursor-default bg-black/20 sm:hidden" type="button" aria-label="Close calendar" onClick={() => setOpen(false)} />
+          <div className="fixed inset-x-3 bottom-3 z-50 rounded-3xl border border-line bg-white p-4 shadow-surface sm:absolute sm:inset-auto sm:left-0 sm:top-full sm:z-30 sm:mt-2 sm:w-[24rem] sm:rounded-2xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-brand">Incident date</p>
+                <p className="mt-1 text-sm font-semibold text-muted">Only last 30 days are available.</p>
+              </div>
+              <button className="rounded-xl border border-line bg-[#fbfdfc] px-3 py-2 text-xs font-bold text-muted" type="button" onClick={() => setOpen(false)}>Close</button>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-line bg-[#fbfdfc] p-3">
+              <div className="flex items-center justify-between">
+                <button className="grid size-9 place-items-center rounded-xl border border-line bg-white text-brand disabled:opacity-40" disabled={!canGoPrevious} onClick={() => setVisibleMonth(addMonths(visibleMonth, -1))} type="button">
+                  <ChevronLeft aria-hidden="true" size={17} />
+                </button>
+                <p className="font-display text-sm font-bold">{visibleMonth.toLocaleDateString("en-IN", { month: "long", year: "numeric" })}</p>
+                <button className="grid size-9 place-items-center rounded-xl border border-line bg-white text-brand disabled:opacity-40" disabled={!canGoNext} onClick={() => setVisibleMonth(addMonths(visibleMonth, 1))} type="button">
+                  <ChevronRight aria-hidden="true" size={17} />
+                </button>
+              </div>
+
+              <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[0.68rem] font-bold uppercase tracking-[0.08em] text-muted">
+                {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}
+              </div>
+              <div className="mt-2 grid grid-cols-7 gap-1">
+                {days.map((day, index) => {
+                  if (!day) return <span key={`blank-${index}`} className="aspect-square" />;
+                  const disabled = isDateDisabled(day, minimum, today);
+                  const active = toDateKey(day) === selectedDateKey;
+                  return (
+                    <button
+                      className={`aspect-square rounded-xl text-sm font-bold transition ${
+                        active ? "bg-brand text-white" : disabled ? "cursor-not-allowed bg-transparent text-[#b8c2bf]" : "bg-white text-ink hover:bg-brand-soft hover:text-brand"
+                      }`}
+                      disabled={disabled}
+                      key={toDateKey(day)}
+                      onClick={() => pickDate(day)}
+                      type="button"
+                    >
+                      {day.getDate()}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="text-xs font-bold uppercase tracking-[0.1em] text-muted">Hour</span>
+                <select className="mt-1 h-11 w-full rounded-xl border border-line bg-[#fbfdfc] px-3 text-sm font-semibold text-ink outline-none focus:border-brand" value={selected?.getHours() ?? ""} onChange={(event) => updateTime("hour", event.target.value)}>
+                  <option value="" disabled>HH</option>
+                  {Array.from({ length: 24 }, (_, hour) => <option key={hour} value={hour}>{String(hour).padStart(2, "0")}</option>)}
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-xs font-bold uppercase tracking-[0.1em] text-muted">Minute</span>
+                <select className="mt-1 h-11 w-full rounded-xl border border-line bg-[#fbfdfc] px-3 text-sm font-semibold text-ink outline-none focus:border-brand" value={selected?.getMinutes() ?? ""} onChange={(event) => updateTime("minute", event.target.value)}>
+                  <option value="" disabled>MM</option>
+                  {Array.from({ length: 12 }, (_, index) => index * 5).map((minute) => <option key={minute} value={minute}>{String(minute).padStart(2, "0")}</option>)}
+                </select>
+              </label>
+            </div>
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 function FormField({ children, error, helper, icon, label }: { children: React.ReactNode; error?: string; helper?: string; icon?: React.ReactNode; label: string }) {
-  return <label className="block"><span className="flex items-center gap-2 text-sm font-bold text-ink">{icon}{label}</span><span className="mt-2 block">{children}</span>{helper ? <span className="mt-2 block text-xs leading-5 text-muted">{helper}</span> : null}{error ? <span className="mt-2 block text-xs font-semibold text-danger">{error}</span> : null}</label>;
+  return <div className="block"><span className="flex items-center gap-2 text-sm font-bold text-ink">{icon}{label}</span><span className="mt-2 block">{children}</span>{helper ? <span className="mt-2 block text-xs leading-5 text-muted">{helper}</span> : null}{error ? <span className="mt-2 block text-xs font-semibold text-danger">{error}</span> : null}</div>;
+}
+
+function isAllowedIncidentDateTime(value: string) {
+  const date = parseLocalDateTime(value);
+  if (!date) return false;
+  const now = new Date();
+  return date >= getMinimumIncidentDate() && date <= now;
+}
+
+function getMinimumIncidentDate() {
+  const minimum = new Date();
+  minimum.setMonth(minimum.getMonth() - 1);
+  minimum.setSeconds(0, 0);
+  return minimum;
+}
+
+function parseLocalDateTime(value: string) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function toLocalDateTimeValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hour = String(date.getHours()).padStart(2, "0");
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hour}:${minute}`;
+}
+
+function startOfMonth(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function addMonths(date: Date, count: number) {
+  return new Date(date.getFullYear(), date.getMonth() + count, 1);
+}
+
+function getCalendarDays(month: Date) {
+  const firstDay = startOfMonth(month);
+  const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+  const days: Array<Date | null> = Array.from({ length: firstDay.getDay() }, () => null);
+  for (let day = 1; day <= lastDay.getDate(); day += 1) {
+    days.push(new Date(month.getFullYear(), month.getMonth(), day));
+  }
+  return days;
+}
+
+function isDateDisabled(day: Date, minimum: Date, maximum: Date) {
+  const current = new Date(day.getFullYear(), day.getMonth(), day.getDate());
+  const min = new Date(minimum.getFullYear(), minimum.getMonth(), minimum.getDate());
+  const max = new Date(maximum.getFullYear(), maximum.getMonth(), maximum.getDate());
+  return current < min || current > max;
+}
+
+function clampIncidentDateTime(date: Date, minimum: Date, maximum: Date) {
+  if (date < minimum) return minimum;
+  if (date > maximum) return maximum;
+  return date;
+}
+
+function toDateKey(date: Date) {
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
+function isSameDate(first: Date, second: Date) {
+  return first.getFullYear() === second.getFullYear() && first.getMonth() === second.getMonth() && first.getDate() === second.getDate();
+}
+
+function roundDownToFive(minute: number) {
+  return Math.floor(minute / 5) * 5;
+}
+
+function formatIncidentDate(date: Date) {
+  return date.toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }

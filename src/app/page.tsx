@@ -15,7 +15,9 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FeedbackSection } from "@/components/landing/feedback-section";
 import { LocationSafetySnapshot } from "@/components/landing/location-safety-snapshot";
+import { QuickIncidentRecord } from "@/components/landing/quick-incident-record";
 
 const civicSteps = [
   {
@@ -64,6 +66,7 @@ export default function Home() {
             Why CivicShield
           </a>
           <Link className="transition-colors hover:text-brand" href="/dashboard">Public dashboard</Link>
+          <Link className="transition-colors hover:text-brand" href="/moderator">Moderator sign in</Link>
         </nav>
 
         <Button asChild className="hidden sm:inline-flex" size="sm">
@@ -71,7 +74,15 @@ export default function Home() {
         </Button>
       </header>
 
-      <section className="relative mx-auto grid max-w-7xl gap-12 px-5 pb-20 pt-12 lg:grid-cols-[1.05fr_.95fr] lg:px-8 lg:pb-28 lg:pt-20">
+      <section className="relative mx-auto grid max-w-7xl gap-12 px-5 pb-20 pt-8 lg:grid-cols-[1.05fr_.95fr] lg:px-8 lg:pb-28 lg:pt-12">
+        <div className="grid gap-4 lg:col-span-2 lg:grid-cols-[1.05fr_.55fr] lg:items-stretch">
+          <QuickIncidentRecord />
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 lg:grid-rows-3">
+            <Button asChild className="h-full min-h-20 px-5 text-base sm:text-lg" size="lg"><Link href="/report">Report a civic issue <ArrowRight aria-hidden="true" size={19} /></Link></Button>
+            <Button asChild className="h-full min-h-20 px-5 text-base sm:text-lg" size="lg" variant="outline"><Link href="/emergency"><Siren aria-hidden="true" size={19} /> I need emergency help</Link></Button>
+            <Link className="flex min-h-20 items-center justify-center gap-2 rounded-xl border border-[#f0c6d8] bg-[#fff7fb] px-5 text-center text-base font-bold text-[#9b2755] transition hover:bg-[#ffeaf3] sm:text-lg" href="/emergency?type=women"><Venus aria-hidden="true" size={19} /> Women safety</Link>
+          </div>
+        </div>
         <div className="relative z-10 max-w-2xl">
           <Badge className="gap-1.5" tone="safe">
             <Sparkles aria-hidden="true" size={13} />
@@ -91,24 +102,6 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button asChild size="lg">
-              <Link href="/report">
-                Report a civic issue <ArrowRight aria-hidden="true" size={18} />
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link href="/emergency">
-                <Siren aria-hidden="true" size={18} /> I need emergency help
-              </Link>
-            </Button>
-          </div>
-          <Link
-            className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#f0c6d8] bg-[#fff7fb] px-4 py-2 text-sm font-bold text-[#9b2755] transition hover:bg-[#ffeaf3]"
-            href="/emergency?type=women"
-          >
-            <Venus aria-hidden="true" size={16} /> Women safety and complaint support
-          </Link>
           <p className="mt-4 flex items-center gap-2 text-sm text-muted">
             <CheckCircle2 aria-hidden="true" className="text-brand" size={16} />
             Clear guidance. Citizen-approved action. No false closure claims.
@@ -259,15 +252,7 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      <footer className="border-t border-line px-5 py-8 lg:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2 font-semibold text-ink">
-            <ShieldCheck aria-hidden="true" className="text-brand" size={18} /> CivicShield AI
-          </div>
-          <p>General guidance only. In immediate danger, call 112.</p>
-        </div>
-      </footer>
+      <FeedbackSection />
     </main>
   );
 }

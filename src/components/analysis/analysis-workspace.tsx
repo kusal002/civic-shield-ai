@@ -77,6 +77,7 @@ export function AnalysisWorkspace({ reportId }: { reportId: string }) {
   if (error || !report || !analysis) return <MissingState message={error || "This report could not be opened."} />;
 
   const isEmergency = analysis.urgency === "critical";
+  const immediateActions = analysis.immediateActions.filter((action) => action.trim().length > 0);
   return (
     <main className="min-h-screen bg-canvas px-5 py-8 text-ink sm:py-10 lg:px-8">
       <div className="mx-auto max-w-7xl">
@@ -86,7 +87,7 @@ export function AnalysisWorkspace({ reportId }: { reportId: string }) {
           <div className="space-y-6">
             <Card className="overflow-hidden rounded-3xl"><CardHeader className="border-b border-line bg-[#fbfdfc] p-6 sm:p-8"><div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div><p className="eyebrow">AI-assisted safety brief</p><h1 className="mt-3 font-display text-3xl font-bold tracking-tight sm:text-4xl">{analysis.category}</h1><p className="mt-3 max-w-2xl leading-7 text-muted">{analysis.riskSummary}</p></div><UrgencyBadge urgency={analysis.urgency} /></div></CardHeader><CardContent className="grid gap-5 p-6 sm:grid-cols-2 sm:p-8"><InfoBlock icon={<MapPin aria-hidden="true" size={18} />} label="Confirmed location" value={report.incidentLocation?.label ?? report.location} /><InfoBlock icon={<ClipboardCheck aria-hidden="true" size={18} />} label="Department type" value={analysis.route.name} /><InfoBlock icon={<FileText aria-hidden="true" size={18} />} label="Attachments saved locally" value={`${report.attachments?.length ?? 0} file(s) on this device`} /><InfoBlock icon={<Sparkles aria-hidden="true" size={18} />} label="Analysis source" value={analysis.generatedBy === "groq" ? "Groq free-tier AI" : "Local safety fallback"} /></CardContent></Card>
 
-            <Card className="rounded-3xl"><CardContent className="p-6 sm:p-8"><p className="eyebrow">What to do now</p><div className="mt-5 space-y-3">{analysis.immediateActions.map((action) => <div key={action} className="flex gap-3 rounded-2xl border border-line bg-[#fbfdfc] p-4 text-sm leading-6"><CheckCircle2 aria-hidden="true" className="mt-0.5 shrink-0 text-brand" size={17} />{action}</div>)}</div></CardContent></Card>
+            {immediateActions.length > 0 ? <Card className="rounded-3xl"><CardContent className="p-6 sm:p-8"><p className="eyebrow">What to do now</p><div className="mt-5 space-y-3">{immediateActions.map((action) => <div key={action} className="flex gap-3 rounded-2xl border border-line bg-[#fbfdfc] p-4 text-sm leading-6"><CheckCircle2 aria-hidden="true" className="mt-0.5 shrink-0 text-brand" size={17} />{action}</div>)}</div></CardContent></Card> : null}
 
             <Card className="rounded-3xl"><CardHeader className="p-6 pb-0 sm:p-8 sm:pb-0"><div className="flex items-center justify-between gap-3"><div><p className="eyebrow">Formal complaint</p><h2 className="mt-2 font-display text-2xl font-bold tracking-tight">Ready for review</h2></div><CopyButton text={analysis.formalComplaint} /></div></CardHeader><CardContent className="p-6 sm:p-8"><pre className="whitespace-pre-wrap rounded-2xl border border-line bg-[#fbfdfc] p-4 font-sans text-sm leading-6 text-[#426058]">{analysis.formalComplaint}</pre></CardContent></Card>
 
@@ -125,7 +126,11 @@ function MailComposer({ analysis, onRegenerate, report, reportId }: { analysis: 
     const location = report.incidentLocation;
     if (!location) return;
     const controller = new AbortController();
-    setDepartmentStatus("loading");
+    // Defer the loading update so this effect only starts the external request.
+    // React's hook lint rule correctly avoids a synchronous render cascade here.
+    queueMicrotask(() => {
+      if (!controller.signal.aborted) setDepartmentStatus("loading");
+    });
     void fetch(`/api/department-nearby?lat=${location.latitude}&lon=${location.longitude}&category=${encodeURIComponent(analysis.route.category)}&route=${encodeURIComponent(analysis.route.name)}`, { signal: controller.signal })
       .then((response) => response.json())
       .then((data: { departments?: SuggestedDepartment[] }) => setDepartments(data.departments ?? []))

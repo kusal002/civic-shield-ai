@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 
 import { EmergencyAlertMarquee } from "@/components/emergency/emergency-alert-marquee";
 import { PwaRegister } from "@/components/shared/pwa-register";
+import { SiteFooter } from "@/components/shared/site-footer";
 
 import "./globals.css";
 
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <PwaRegister />
         <EmergencyAlertMarquee />
         {children}
+        <SiteFooter />
       </body>
     </html>
   );

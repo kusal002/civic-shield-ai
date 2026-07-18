@@ -2,6 +2,8 @@
 
 import { AlertTriangle, Building2, Eye, MapPin, RefreshCw, ShieldAlert, ShieldCheck, Trash2, Venus } from "lucide-react";
 import { useState } from "react";
+import { CalendarDays, ChevronLeft, ChevronRight, Eye, Filter, ShieldCheck, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +28,26 @@ type ModeratorReport = {
   gmailMessageId: string | null;
 };
 
+type ModeratorReport = {
+  id: string;
+  description: string;
+  locationLabel: string;
+  duration: string;
+  affectedPeople: number | null;
+  extraDetails: string | null;
+  attachmentCount: number;
+  category: string | null;
+  urgency: UrgencyLevel | null;
+  routeName: string | null;
+  status: ReportStatus;
+  createdAt: string;
+  updatedAt: string;
+  emailRecipient: string | null;
+  gmailMessageId: string | null;
+};
+
+type PresetRange = "all" | "7" | "14" | "30" | "custom";
+
 const statuses: ReportStatus[] = ["acknowledged", "assigned", "in-progress", "department-resolved", "verification-pending", "verified-resolved", "disputed", "reopened", "overdue"];
 
 export function ModeratorWorkspace() {
@@ -36,12 +58,18 @@ export function ModeratorWorkspace() {
   const [emergencyReports, setEmergencyReports] = useState<EmergencyReport[]>([]);
   const [selected, setSelected] = useState<ModeratorReport | null>(null);
   const [selectedEmergency, setSelectedEmergency] = useState<EmergencyReport | null>(null);
+  const [reports, setReports] = useState<ModeratorReport[]>([]);
+  const [selected, setSelected] = useState<ModeratorReport | null>(null);
   const [status, setStatus] = useState<ReportStatus>("acknowledged");
   const [note, setNote] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [range, setRange] = useState<PresetRange>("all");
+  const [city, setCity] = useState("all");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
   async function loadReports() {
     setLoading(true);

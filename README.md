@@ -679,6 +679,20 @@ After sign-in at `/moderator`, the admin now sees every persisted civic report i
 
 The destructive delete action uses a CivicShield in-app confirmation modal rather than a browser alert, with explicit `Keep report` and `Delete permanently` choices.
 
+### Reporting and moderation polish — 19 July 2026
+
+- Empty AI guidance is no longer rendered as a blank `What to do now` card on the report analysis page.
+- The moderator queue supports all-time, past 7 days, past 2 weeks, past month, and custom date ranges.
+- Moderator city filters are created only from cities represented in saved reports. Kolkata, New Town, Bidhannagar, and Rajarhat reports are grouped as `Kolkata Metropolitan Area` instead of appearing as separate city options.
+- The landing navigation and site-wide footer link to `/moderator`. The footer also contains the project team’s email, GitHub, and LinkedIn details.
+
+### Home and feedback enhancements — 19 July 2026
+
+- The homepage now begins with a quick incident-record form and three prominent action paths for civic reports, emergency help, and women safety.
+- Quick incident records use the existing protected emergency-report endpoint and are saved to the same tracking system as records raised from `/emergency`.
+- A feedback form above the footer delivers messages to both project-team inboxes using the configured CivicShield Gmail sender. It is rate limited and does not expose recipient email addresses in the UI.
+- The report page has a clear `Back to home` link above the form, and the moderator custom-date filter now uses an in-app calendar popover.
+
 Required environment variables are documented in `.env.example`:
 
 ```text

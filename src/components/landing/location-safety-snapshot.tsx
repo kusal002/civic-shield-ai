@@ -1,8 +1,8 @@
 "use client";
 
-import { AlertTriangle, BellRing, Clock3, MapPin, ShieldCheck, Sparkles, Venus } from "lucide-react";
+import { AlertTriangle, BellRing, Clock3, MapPin, Sparkles, Venus } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,6 @@ export function LocationSafetySnapshot({ compact = false }: { compact?: boolean 
   const [visitCount, setVisitCount] = useState(0);
   const [civicReports, setCivicReports] = useState<PublicCivicReport[]>([]);
   const [emergencyReports, setEmergencyReports] = useState<EmergencyReport[]>([]);
-  const [status, setStatus] = useState<"requesting" | "loading" | "ready" | "blocked">("requesting");
 
   useEffect(() => {
     if (!navigator.geolocation) return;
@@ -32,7 +31,7 @@ export function LocationSafetySnapshot({ compact = false }: { compact?: boolean 
         setCoordinates(nextCoordinates);
         setVisitCount(trackVisit(nextCoordinates));
       },
-      () => setStatus("blocked"),
+      () => undefined,
       { enableHighAccuracy: true, maximumAge: 120000, timeout: 8000 },
     );
   }, []);
@@ -62,7 +61,6 @@ export function LocationSafetySnapshot({ compact = false }: { compact?: boolean 
     const controller = new AbortController();
 
     async function loadNearbySignals() {
-      setStatus("loading");
       try {
         const [civicResponse, emergencyResponse] = await Promise.all([
           fetch(`/api/public-reports?lat=${currentCoordinates.latitude}&lon=${currentCoordinates.longitude}&radiusKm=5`, { signal: controller.signal }),
@@ -72,10 +70,7 @@ export function LocationSafetySnapshot({ compact = false }: { compact?: boolean 
         const emergencyPayload = await emergencyResponse.json() as { reports?: EmergencyReport[] };
         setCivicReports(filterLast24Hours(civicPayload.reports ?? []));
         setEmergencyReports(filterLast24Hours(emergencyPayload.reports ?? []));
-        setStatus("ready");
-      } catch {
-        if (!controller.signal.aborted) setStatus("ready");
-      }
+      } catch {}
     }
 
     loadNearbySignals();
@@ -83,22 +78,12 @@ export function LocationSafetySnapshot({ compact = false }: { compact?: boolean 
   }, [coordinates]);
 
   const totalSignals = civicReports.length + emergencyReports.length;
-  const isNewPlace = visitCount <= 1;
   const locationName = locationLabel || (coordinates ? "Current detected location" : "Location check needed");
   const womenSignals = emergencyReports.filter((report) => report.type.toLowerCase().includes("women"));
   const safetyTone = totalSignals > 0 ? "caution" : "safe";
 
-  const headline = useMemo(() => {
-    if (status === "blocked") return "Turn on location to unlock nearby safety";
-    if (status !== "ready") return "Checking your current location";
-    if (totalSignals > 0 && isNewPlace) return "You are new here. Look out for these recent signals.";
-    if (totalSignals > 0) return "Recent safety signals near this location.";
-    if (isNewPlace) return "You are new here, and the last 24 hours look calm.";
-    return "This location looks calm right now.";
-  }, [isNewPlace, status, totalSignals]);
-
   return (
-    <section className={`relative overflow-hidden rounded-[1.75rem] border bg-white shadow-surface ${compact ? "border-line p-5" : "max-h-[44rem] border-white/80"}`}>
+    <section className={`relative overflow-hidden rounded-[1.75rem] border bg-white shadow-surface ${compact ? "border-line p-5" : "border-white/80"}`}>
       <div className="absolute right-0 top-0 h-32 w-32 rounded-bl-full bg-[#ddf5ed]" />
       <div className={compact ? "" : "border-b border-line bg-[#fbfdfc] px-6 py-5"}>
         <div className="relative flex items-start justify-between gap-4">
@@ -119,32 +104,15 @@ export function LocationSafetySnapshot({ compact = false }: { compact?: boolean 
         </div>
       </div>
 
-      <div className={compact ? "relative mt-5" : "relative space-y-5 p-6"}>
-        <div className={`rounded-2xl border p-4 ${totalSignals ? "border-[#f0d0c9] bg-[#fff8f6]" : "border-[#cbe8dd] bg-[#effaf5]"}`}>
-          <div className="flex items-start gap-3">
-            <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${totalSignals ? "bg-[#ffe4df] text-danger" : "bg-white text-brand"}`}>
-              {totalSignals ? <BellRing aria-hidden="true" size={19} /> : <ShieldCheck aria-hidden="true" size={19} />}
-            </span>
-            <div>
-              <p className={`text-xs font-bold uppercase tracking-[0.12em] ${totalSignals ? "text-danger" : "text-brand"}`}>
-                {status === "ready" ? "24-hour safety read" : "Safety read"}
-              </p>
-              <h3 className="mt-1 font-display text-lg font-bold leading-6">{headline}</h3>
-              <p className="mt-2 text-sm leading-6 text-muted">
-                {totalSignals ? "Review recent civic complaints and emergency reports before moving through the area." : "No nearby civic or emergency reports were lodged in the last 24 hours within 5 km."}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-3">
+      <div className={compact ? "relative mt-5 space-y-4" : "relative space-y-5 p-6"}>
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
           <SignalTile icon={<AlertTriangle aria-hidden="true" size={16} />} label="Civic complaints" value={civicReports.length} />
           <SignalTile icon={<BellRing aria-hidden="true" size={16} />} label="Emergencies" value={emergencyReports.length} />
           <SignalTile icon={<Venus aria-hidden="true" size={16} />} label="Women safety" value={womenSignals.length} />
         </div>
 
         {totalSignals ? (
-          <div className="max-h-52 space-y-2 overflow-y-auto pr-1">
+          <div className="max-h-52 space-y-3 overflow-y-auto pr-1">
             {emergencyReports.slice(0, 3).map((report) => <SignalRow key={report.id} title={report.type} detail={report.locationLabel} time={report.createdAt} tone="danger" />)}
             {civicReports.slice(0, 3).map((report) => <SignalRow key={report.id} title={report.category ?? "Civic complaint"} detail={report.locationLabel} time={report.createdAt} tone="brand" />)}
           </div>
@@ -155,11 +123,11 @@ export function LocationSafetySnapshot({ compact = false }: { compact?: boolean 
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-2">
-          <Button asChild className="min-w-0 px-2 text-xs sm:px-3 sm:text-sm">
+        <div className="grid grid-cols-1 gap-2 pt-1 sm:grid-cols-2 sm:gap-3">
+          <Button asChild className="min-w-0 px-3 text-sm">
             <Link href="/dashboard"><Sparkles aria-hidden="true" size={16} /> Open safety dashboard</Link>
           </Button>
-          <Button asChild className="min-w-0 px-2 text-xs sm:px-3 sm:text-sm bg-[#a22a58] hover:bg-[#872047]">
+          <Button asChild className="min-w-0 px-3 text-sm bg-[#a22a58] hover:bg-[#872047]">
             <Link href="/emergency?type=women"><Venus aria-hidden="true" size={16} /> Women safety</Link>
           </Button>
         </div>
@@ -170,9 +138,9 @@ export function LocationSafetySnapshot({ compact = false }: { compact?: boolean 
 
 function SignalTile({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
   return (
-    <div className="rounded-2xl border border-line bg-[#fbfdfc] p-3">
-      <div className="flex items-center gap-2 text-brand">{icon}<p className="text-[0.65rem] font-bold uppercase tracking-[0.1em] text-muted">{label}</p></div>
-      <p className="mt-2 font-display text-2xl font-bold">{value}</p>
+    <div className="rounded-xl border border-line bg-[#fbfdfc] p-2.5 sm:rounded-2xl sm:p-3">
+      <div className="flex items-start gap-1.5 text-brand sm:gap-2">{icon}<p className="min-h-8 text-[0.58rem] font-bold uppercase leading-4 tracking-[0.08em] text-muted sm:text-[0.65rem] sm:tracking-[0.1em]">{label}</p></div>
+      <p className="mt-1.5 font-display text-xl font-bold sm:mt-2 sm:text-2xl">{value}</p>
     </div>
   );
 }

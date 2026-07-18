@@ -1,5 +1,7 @@
 # CivicShield AI
 
+> This is the product-concept document. For the current implementation, setup requirements, completed milestones, and launch checklist, see [README.md](README.md).
+
 ## Core Idea
 
 CivicShield AI is a public safety and civic issue management portal that helps citizens report everyday civic problems, discover nearby emergency support, and receive AI-guided safety actions during urgent situations.
@@ -218,20 +220,16 @@ With CivicShield AI, a user can type a messy real-world situation like "the road
 
 This creates a practical bridge between citizens, civic problems, and emergency awareness.
 
-## Future Scope
+## Further Scope
 
 In the future, CivicShield AI can support:
 
-- real location-based reports
-- map view
 - photo-based issue detection
 - multilingual reporting
-- department-wise routing
-- community voting
-- official status tracking
-- emergency contact integration
-- local authority dashboards
+- verified department directory expansion beyond supported pilot entries
+- official government-system integrations and acknowledgement tracking
+- local-authority accounts and role-based dashboards
 - ward-wise issue analytics
+- stronger shared production rate limits and abuse detection
 
-The hackathon version will focus on proving the core experience: simple input, AI analysis, complaint generation, emergency guidance, and public issue dashboard.
-
+The hackathon version already proves the core experience: location-aware reporting, AI analysis, evidence attachment, complaint drafting, emergency guidance, public status tracking, and moderated accountability.

@@ -23,11 +23,16 @@ export function AnalysisWorkspace({ reportId }: { reportId: string }) {
   const [report, setReport] = useState<CivicReport | null>(null);
   const [analysis, setAnalysis] = useState<SafetyAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRegenerating, setIsRegenerating] = useState(false);
   const [error, setError] = useState("");
 
   async function generateReport(nextReport: CivicReport, variation = 0) {
-    setLoading(true);
-    setError("");
+    const isDraftRegeneration = variation !== 0;
+    if (isDraftRegeneration) setIsRegenerating(true);
+    else {
+      setLoading(true);
+      setError("");
+    }
     try {
       const response = await fetch("/api/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ report: nextReport, variation }) });
       if (!response.ok) throw new Error("Analysis could not be prepared.");
@@ -41,9 +46,10 @@ export function AnalysisWorkspace({ reportId }: { reportId: string }) {
         body: JSON.stringify({ analysis: result }),
       });
     } catch {
-      setError("CivicShield could not prepare this analysis. Please try again.");
+      if (!isDraftRegeneration) setError("CivicShield could not prepare this analysis. Please try again.");
     } finally {
-      setLoading(false);
+      if (isDraftRegeneration) setIsRegenerating(false);
+      else setLoading(false);
     }
   }
 
@@ -91,7 +97,7 @@ export function AnalysisWorkspace({ reportId }: { reportId: string }) {
 
             <Card className="rounded-3xl"><CardHeader className="p-6 pb-0 sm:p-8 sm:pb-0"><div className="flex items-center justify-between gap-3"><div><p className="eyebrow">Formal complaint</p><h2 className="mt-2 font-display text-2xl font-bold tracking-tight">Ready for review</h2></div><CopyButton text={analysis.formalComplaint} /></div></CardHeader><CardContent className="p-6 sm:p-8"><pre className="whitespace-pre-wrap rounded-2xl border border-line bg-[#fbfdfc] p-4 font-sans text-sm leading-6 text-[#426058]">{analysis.formalComplaint}</pre></CardContent></Card>
 
-            <MailComposer key={analysis.emailBody} analysis={analysis} report={report} reportId={report.id} onRegenerate={() => void generateReport(report, Date.now())} />
+            <MailComposer key={analysis.emailBody} analysis={analysis} report={report} reportId={report.id} isRegenerating={isRegenerating} onRegenerate={() => void generateReport(report, Date.now())} />
           </div>
           <aside className="space-y-5"><Card className="rounded-3xl"><CardContent className="p-6"><p className="eyebrow">Report reference</p><p className="mt-2 font-display text-2xl font-bold">{report.id}</p><p className="mt-4 text-sm leading-6 text-muted">Saved locally on {new Date(report.createdAt).toLocaleString()}.</p></CardContent></Card><Card className="rounded-3xl border-[#ead9b8] bg-[#fffaf0]"><CardContent className="p-6"><Badge tone="caution" className="gap-1.5"><AlertTriangle aria-hidden="true" size={14} /> Honest routing</Badge><p className="mt-4 text-sm leading-6 text-[#725019]">CivicShield shows a dynamic nearby department suggestion for context. In hackathon mode, the actual email goes to the configured CivicShield inbox, and a sent email is not proof that any authority has acted.</p></CardContent></Card></aside>
         </div>
@@ -100,7 +106,7 @@ export function AnalysisWorkspace({ reportId }: { reportId: string }) {
   );
 }
 
-function MailComposer({ analysis, onRegenerate, report, reportId }: { analysis: SafetyAnalysis; onRegenerate: () => void; report: CivicReport; reportId: string }) {
+function MailComposer({ analysis, isRegenerating, onRegenerate, report, reportId }: { analysis: SafetyAnalysis; isRegenerating: boolean; onRegenerate: () => void; report: CivicReport; reportId: string }) {
   const [departments, setDepartments] = useState<SuggestedDepartment[]>([]);
   const [departmentStatus, setDepartmentStatus] = useState<"idle" | "loading" | "ready">("idle");
   const [subject, setSubject] = useState(analysis.emailSubject);
@@ -203,9 +209,8 @@ function MailComposer({ analysis, onRegenerate, report, reportId }: { analysis: 
       </CardHeader>
       <CardContent className="space-y-4 p-6 sm:p-8">
         <DepartmentSuggestion departments={departments} status={departmentStatus} fallbackName={analysis.route.name} />
-        <label className="block text-sm font-bold text-ink">Subject<input className="mt-2 h-12 w-full rounded-xl border border-line bg-white px-3 text-sm font-normal focus:border-brand focus:outline-none" value={subject} onChange={(event) => setSubject(event.target.value)} /></label>
-        <label className="block text-sm font-bold text-ink">Message<textarea className="mt-2 min-h-64 w-full rounded-xl border border-line bg-white px-3 py-3 text-sm font-normal leading-6 focus:border-brand focus:outline-none" value={body} onChange={(event) => setBody(event.target.value)} /></label>
-        <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={onRegenerate}><RefreshCw aria-hidden="true" size={16} /> Generate another draft</Button><Button type="button" variant="outline" onClick={copyDraft}><Copy aria-hidden="true" size={16} /> {copied ? "Copied" : "Copy draft"}</Button></div>
+        {isRegenerating ? <DraftFieldsSkeleton /> : <><label className="block text-sm font-bold text-ink">Subject<input className="mt-2 h-12 w-full rounded-xl border border-line bg-white px-3 text-sm font-normal focus:border-brand focus:outline-none" value={subject} onChange={(event) => setSubject(event.target.value)} /></label><label className="block text-sm font-bold text-ink">Message<textarea className="mt-2 min-h-64 w-full rounded-xl border border-line bg-white px-3 py-3 text-sm font-normal leading-6 focus:border-brand focus:outline-none" value={body} onChange={(event) => setBody(event.target.value)} /></label></>}
+        <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" disabled={isRegenerating} onClick={onRegenerate}>{isRegenerating ? <LoaderCircle aria-hidden="true" className="animate-spin" size={16} /> : <RefreshCw aria-hidden="true" size={16} />}{isRegenerating ? "Creating another draft…" : "Generate another draft"}</Button><Button type="button" variant="outline" disabled={isRegenerating} onClick={copyDraft}><Copy aria-hidden="true" size={16} /> {copied ? "Copied" : "Copy draft"}</Button></div>
         <label className="flex gap-3 rounded-2xl border border-line bg-[#fbfdfc] p-4 text-sm leading-6 text-muted"><input className="mt-1 size-4 accent-[#076b5a]" type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />I have checked the final message. I authorize CivicShield to send this report to the configured inbox for demo review.</label>
         <div className="pt-2">
           {gmailStatus === "connected" ? <Button className="w-full sm:w-auto" type="button" size="lg" disabled={disabled} onClick={() => void sendWithGmail()}><Send aria-hidden="true" size={18} /> {isSending ? "Sending report…" : ownerConfigured ? "Send to CivicShield inbox" : "Send to CivicShield inbox"}</Button> : <Button asChild className="w-full sm:w-auto" size="lg" disabled={gmailStatus === "checking"}><Link href={`/api/auth/gmail/connect?returnTo=${encodeURIComponent(`/analysis/${reportId}`)}`}><Mail aria-hidden="true" size={18} /> {gmailStatus === "checking" ? "Checking Gmail…" : "Connect Gmail sender"}</Link></Button>}
@@ -223,7 +228,7 @@ function DepartmentSuggestion({ departments, fallbackName, status }: { departmen
     return <div className="rounded-2xl border border-line bg-[#fbfdfc] p-4 text-sm font-semibold text-muted">Finding the nearest relevant department near the selected location...</div>;
   }
   if (!firstDepartment) {
-    return <div className="rounded-2xl border border-[#ead9b8] bg-[#fffaf0] p-4 text-sm leading-6 text-[#725019]"><p className="font-bold">Suggested department type: {fallbackName}</p><p className="mt-1">Google Places did not return a nearby office for this location. The complaint is still dropped to the CivicShield inbox.</p></div>;
+    return <div className="rounded-2xl border border-[#ead9b8] bg-[#fffaf0] p-4 text-sm leading-6 text-[#725019]"><p className="font-bold">Your message will be sent to the {fallbackName}.</p><p className="mt-1">Your complaint is first received in the CivicShield inbox. After verification, it will be forwarded to the department.</p></div>;
   }
   return (
     <div className="rounded-2xl border border-[#c7e7dc] bg-brand-soft p-4">
@@ -244,9 +249,45 @@ function DepartmentSuggestion({ departments, fallbackName, status }: { departmen
   );
 }
 
+function DraftFieldsSkeleton() {
+  return <div className="space-y-5" aria-live="polite" aria-label="Creating another email draft">
+    <div><div className="h-4 w-16 animate-pulse rounded bg-brand-soft" /><div className="mt-2 h-12 w-full animate-pulse rounded-xl border border-line bg-[#f5faf8]" /></div>
+    <div><div className="h-4 w-20 animate-pulse rounded bg-brand-soft" /><div className="mt-2 min-h-64 w-full animate-pulse rounded-xl border border-line bg-[#f5faf8] p-4"><div className="h-3 w-11/12 rounded bg-[#e1f1eb]" /><div className="mt-3 h-3 w-4/5 rounded bg-[#e1f1eb]" /><div className="mt-3 h-3 w-3/5 rounded bg-[#e1f1eb]" /></div></div>
+    <p className="-mt-2 text-xs font-medium text-brand">AI is preparing a fresh version of your email draft…</p>
+  </div>;
+}
 function UrgencyBadge({ urgency }: { urgency: SafetyAnalysis["urgency"] }) { const tone = urgency === "critical" || urgency === "high" ? "urgent" : urgency === "medium" ? "caution" : "safe"; return <Badge tone={tone}>{urgency} urgency</Badge>; }
 function InfoBlock({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) { return <div className="flex gap-3"><span className="mt-0.5 text-brand">{icon}</span><div><p className="text-xs font-bold uppercase tracking-[0.11em] text-muted">{label}</p><p className="mt-1 text-sm font-semibold leading-6 text-ink">{value}</p></div></div>; }
 function formatDistance(distanceMeters: number) { return distanceMeters < 1000 ? `${distanceMeters} m away` : `${(distanceMeters / 1000).toFixed(1)} km away`; }
 function CopyButton({ text }: { text: string }) { const [copied, setCopied] = useState(false); return <Button type="button" size="sm" variant="outline" onClick={async () => { await navigator.clipboard.writeText(text); setCopied(true); }}>{copied ? "Copied" : <><Copy aria-hidden="true" size={14} /> Copy</>}</Button>; }
-function LoadingState() { return <main className="grid min-h-screen place-items-center bg-canvas p-6"><div className="text-center"><LoaderCircle className="mx-auto animate-spin text-brand" size={32} /><p className="mt-4 font-display text-xl font-bold">Preparing your civic safety brief…</p><p className="mt-2 text-sm text-muted">This uses Groq when a free API key is configured, with a local fallback for reliability.</p></div></main>; }
+function LoadingState() {
+  return <main className="min-h-screen bg-canvas px-5 py-8 text-ink sm:px-8 sm:py-10">
+    <div className="mx-auto flex min-h-[72vh] max-w-4xl items-center">
+      <section className="relative w-full overflow-hidden rounded-[2rem] border border-white bg-white p-6 shadow-surface sm:p-10" aria-live="polite">
+        <div className="absolute -right-20 -top-20 size-64 rounded-full bg-brand-soft" />
+        <div className="absolute -bottom-24 -left-20 size-56 rounded-full bg-[#fff0ed]" />
+        <div className="relative mx-auto max-w-2xl text-center">
+          <div className="relative mx-auto grid size-20 place-items-center rounded-[1.6rem] bg-brand-soft text-brand">
+            <span className="absolute inset-0 animate-ping rounded-[1.6rem] bg-brand/15" />
+            <LoaderCircle aria-hidden="true" className="relative animate-spin" size={34} />
+          </div>
+          <p className="mt-7 eyebrow">CivicShield AI at work</p>
+          <h1 className="mt-3 font-display text-3xl font-bold tracking-tight sm:text-4xl">Preparing your report draft</h1>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted sm:text-base">We are organising the issue details, location, and evidence into a clear civic brief. This usually takes a few seconds.</p>
+
+          <div className="mt-8 grid gap-3 text-left sm:grid-cols-3">
+            <LoadingStep icon={<FileText aria-hidden="true" size={18} />} label="Reading report" detail="Issue, location, and evidence" active />
+            <LoadingStep icon={<Sparkles aria-hidden="true" size={18} />} label="Drafting clearly" detail="AI-assisted formal wording" />
+            <LoadingStep icon={<Building2 aria-hidden="true" size={18} />} label="Routing preview" detail="Relevant department type" />
+          </div>
+          <div className="mx-auto mt-7 h-1.5 max-w-md overflow-hidden rounded-full bg-brand-soft"><span className="block h-full w-2/3 animate-pulse rounded-full bg-brand" /></div>
+          <p className="mt-3 text-xs font-medium text-muted">Uses Groq when configured, with a local safety fallback.</p>
+        </div>
+      </section>
+    </div>
+  </main>;
+}
+function LoadingStep({ icon, label, detail, active = false }: { icon: React.ReactNode; label: string; detail: string; active?: boolean }) {
+  return <div className={`rounded-2xl border p-4 ${active ? "border-[#b8dfd3] bg-brand-soft" : "border-line bg-[#fbfdfc]"}`}><span className={`grid size-9 place-items-center rounded-xl ${active ? "bg-brand text-white" : "bg-white text-brand"}`}>{icon}</span><p className="mt-3 text-sm font-bold">{label}</p><p className="mt-1 text-xs leading-5 text-muted">{detail}</p></div>;
+}
 function MissingState({ message }: { message: string }) { return <main className="grid min-h-screen place-items-center bg-canvas p-6"><Card className="max-w-lg rounded-3xl"><CardContent className="p-8"><AlertTriangle className="text-danger" size={28} /><h1 className="mt-4 font-display text-2xl font-bold">Report unavailable</h1><p className="mt-3 leading-7 text-muted">{message}</p><Button asChild className="mt-6"><Link href="/report">Create a report</Link></Button></CardContent></Card></main>; }

@@ -90,6 +90,12 @@ export async function getModeratorEmergencyReports(limit = 100) {
   }));
 }
 
+export async function deleteModeratorEmergencyReport(reportId: string) {
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase.from("emergency_reports").delete().eq("emergency_id", reportId);
+  if (error) throw new Error(error.message);
+}
+
 function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
   const earthRadiusMeters = 6371000;
   const deltaLat = toRadians(lat2 - lat1);

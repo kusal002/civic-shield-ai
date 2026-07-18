@@ -46,6 +46,10 @@ export function EmergencyAlertMarquee() {
 
   if (!reports.length) return null;
 
+  // The API already orders these by urgency and recency. Keep the ticker useful,
+  // rather than allowing a long stream of alerts to overwhelm the page header.
+  const priorityReports = reports.slice(0, 3);
+
   return (
     <div className="border-b border-[#f0cfc8] bg-[#fff4f1] text-[#7c2922]">
       <div className="mx-auto flex max-w-7xl items-center gap-3 overflow-hidden px-4 py-2 text-xs font-bold sm:text-sm">
@@ -54,7 +58,7 @@ export function EmergencyAlertMarquee() {
         </span>
         <div className="min-w-0 flex-1 overflow-hidden">
           <div className="emergency-marquee inline-flex gap-8 whitespace-nowrap">
-            {[...reports, ...reports].map((report, index) => (
+            {[...priorityReports, ...priorityReports].map((report, index) => (
               <Link className="inline-flex items-center gap-1.5 hover:underline" href={`/emergency?type=${getEmergencyTypeParam(report.type)}`} key={`${report.id}-${index}`}>
                 <MapPin aria-hidden="true" size={13} />
                 <span className={getPriorityClass(report.priority)}>{(report.priority ?? "medium").toUpperCase()}</span>

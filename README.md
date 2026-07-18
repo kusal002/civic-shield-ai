@@ -432,7 +432,7 @@ civic-shield-ai/
 └── README.md
 ```
 
-> The following planned path is not yet implemented: a moderator workspace. `/emergency`, `/dashboard`, and public report-detail pages now exist.
+> The hackathon MVP now includes `/emergency`, `/dashboard`, public report-detail pages, and a protected moderator workspace for civic and emergency report review.
 
 ---
 
@@ -449,8 +449,8 @@ We will complete one milestone at a time and pause after each one for review. Th
 | 5 | Emergency page with instant local safety detection | Complete |
 | 6 | Free-AI analysis with a reliable fallback | Complete |
 | 7 | Complaint, routing preview, and citizen-confirmed email workflow | Complete for the hackathon MVP |
-| 8 | Public dashboard and persistent status tracking | Partially complete — location-scoped dashboard, public report detail, delivery status, and public timelines are live; moderator-only status updates and community verification controls are pending |
-| 9 | Mobile polish, demo data, testing, and deployment readiness | Pending |
+| 8 | Public dashboard and persistent status tracking | Complete for the hackathon MVP — location-scoped dashboard, public detail/timelines, moderator-only status updates, community verification signals, and civic/emergency moderation are live |
+| 9 | Mobile polish, demo data, testing, and deployment readiness | In progress — responsive refinement and production build checks are complete; final device QA, deployment configuration, and demo rehearsal remain |
 
 ### Step 2 delivery notes
 
@@ -570,7 +570,7 @@ India-wide coverage must be added city-by-city from official municipal or state 
 
 The citizen must still review the recipient and message and check the authorization box before CivicShield sends a message. With `GMAIL_REFRESH_TOKEN`, the project owner Gmail is used; without it, a citizen may connect Gmail for the short access-token lifetime. CivicShield does not claim that a successful send means the authority has acted.
 
-### Current implementation status — 18 July 2026
+### Current implementation status — 19 July 2026
 
 #### Completed
 
@@ -601,16 +601,15 @@ The citizen must still review the recipient and message and check the authorizat
 - Add the same Supabase, Groq, Gmail, and Google environment variables to Vercel before deploying.
 - Enable Google **Geocoding API** for readable addresses and Google **Places API / Places API (New)** for nearby stations, hospitals, safer public places, and phone numbers.
 
-#### Pending next steps
+#### Remaining before launch
 
-1. **Finish Step 8 — Accountability workflow:** moderator-only status updates and community verification/dispute/reopen controls.
-2. **Emergency alert hardening:** add moderation/rate limits for emergency reports, tune alert radius, and decide what emergency details are safe to show publicly.
-3. **Directory expansion:** add verified municipal contacts city-by-city; never guess nationwide recipients.
-4. **Step 9 — Launch quality:** mobile QA, seeded demo reports, rate limiting/moderator access, privacy review, Vercel configuration, and final hackathon demo script.
+1. **Emergency alert hardening:** tune alert radius, add shared production rate limiting, and decide which emergency details are safe for public display.
+2. **Directory expansion:** add verified municipal contacts city-by-city; never guess nationwide recipients.
+3. **Deployment readiness:** complete mobile/device QA, verify all Vercel environment variables, carry out a privacy review, seed safe demo reports, and rehearse the hackathon demo.
 
-### Next milestone: moderated accountability
+### Current accountability boundary
 
-Supabase-backed public tracking is now implemented for the hackathon MVP. The next build step is moderated accountability: authorised moderator status updates, community verification, dispute/reopen controls, stale-case handling, and stricter controls over what emergency details may become public. Raw evidence, private contact details, email recipients, Gmail message IDs, and moderator-only actions must remain private.
+Supabase-backed public tracking and moderated accountability are implemented for the hackathon MVP. Raw evidence, private contact details, email recipients, Gmail message IDs, and moderator-only actions remain private. Community verification is an input for moderator review; it does not independently change a public case status.
 
 ### Step 8 delivery notes: Supabase persistence and public tracking
 
@@ -708,6 +707,13 @@ The destructive delete action uses a CivicShield in-app confirmation modal rathe
 ### Emergency page layout refinement — 19 July 2026
 
 - `/emergency` now presents the quick incident record first, followed by the emergency response controls, nearby help, and the selected safety checklist. The incident form uses a compact responsive layout on mobile and desktop.
+
+### Moderator workflow enhancements — 19 July 2026
+
+- Civic-report details now include a one-click Google Maps location link when coordinates are available.
+- Moderators can select multiple civic reports and batch-mark them `in progress` or `department resolved`, or delete the selected reports after an in-app confirmation.
+- Emergency reports now support city filtering using only cities represented in stored records. Moderators can select one or many emergency reports and permanently delete false or obsolete records through the same protected confirmation flow.
+- Emergency summary metrics use a fixed label area so counts align cleanly across desktop and mobile layouts.
 
 Required environment variables are documented in `.env.example`:
 

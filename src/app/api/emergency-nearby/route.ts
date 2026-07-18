@@ -197,7 +197,7 @@ async function fetchOpenStreetMapPlaces({ kind, lat, lon }: { kind: NearbyKind; 
           name: element.tags?.name ?? readableKind(kind),
           address: buildOsmAddress(element.tags),
           phone: element.tags?.phone ?? element.tags?.["contact:phone"],
-          mapsUrl: placeLat && placeLon ? `https://www.openstreetmap.org/?mlat=${placeLat}&mlon=${placeLon}#map=17/${placeLat}/${placeLon}` : undefined,
+          mapsUrl: placeLat && placeLon ? `https://www.google.com/maps/search/?api=1&query=${placeLat},${placeLon}` : undefined,
           distanceMeters: placeLat && placeLon ? getDistanceMeters(lat, lon, placeLat, placeLon) : undefined,
           source: "openstreetmap" as const,
         };

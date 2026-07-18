@@ -118,12 +118,9 @@ export function EmergencyAssistance() {
   const [nearbyStatus, setNearbyStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
 
   useEffect(() => {
-    const initialType = new URLSearchParams(window.location.search).get("type");
-    if (emergencyTypes.some((type) => type.id === initialType)) setSelectedType(initialType as EmergencyKind);
-
     if (!navigator.geolocation) {
-      setLocationStatus("unsupported");
-      return;
+      const timer = window.setTimeout(() => setLocationStatus("unsupported"), 0);
+      return () => window.clearTimeout(timer);
     }
 
     navigator.geolocation.getCurrentPosition(

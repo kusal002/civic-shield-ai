@@ -1,0 +1,44 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>CivicShield AI app icon</title>
+  <defs>
+    <linearGradient id="bg" x1="56" y1="28" x2="456" y2="484" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E0F2FE"/>
+      <stop offset="0.46" stop-color="#CCFBF1"/>
+      <stop offset="1" stop-color="#DCFCE7"/>
+    </linearGradient>
+    <linearGradient id="shield" x1="134" y1="88" x2="378" y2="428" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0284C7"/>
+      <stop offset="0.5" stop-color="#0F766E"/>
+      <stop offset="1" stop-color="#166534"/>
+    </linearGradient>
+    <linearGradient id="pin" x1="202" y1="172" x2="310" y2="338" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#ECFEFF"/>
+    </linearGradient>
+    <filter id="shadow" x="88" y="68" width="336" height="392" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="18"/>
+      <feGaussianBlur stdDeviation="22"/>
+      <feComposite in2="hardAlpha" operator="out"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.02 0 0 0 0 0.15 0 0 0 0 0.22 0 0 0 0.2 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape"/>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="92" cy="102" r="38" fill="#FFFFFF" fill-opacity="0.58"/>
+  <circle cx="420" cy="402" r="54" fill="#FFFFFF" fill-opacity="0.42"/>
+  <path d="M72 376C128 344 184 344 240 376C296 408 352 408 440 356" stroke="#99F6E4" stroke-width="22" stroke-linecap="round" opacity="0.55"/>
+
+  <g filter="url(#shadow)">
+    <path d="M256 82L386 130V224C386 313 334 378 256 414C178 378 126 313 126 224V130L256 82Z" fill="url(#shield)"/>
+    <path d="M256 116L354 153V225C354 290 315 338 256 367C197 338 158 290 158 225V153L256 116Z" fill="white" fill-opacity="0.11"/>
+  </g>
+
+  <path d="M256 166C211.82 166 176 201.82 176 246C176 304 256 374 256 374C256 374 336 304 336 246C336 201.82 300.18 166 256 166Z" fill="url(#pin)"/>
+  <circle cx="256" cy="246" r="30" fill="#0F766E"/>
+  <path d="M202 342C218 356 236 366 256 374C276 366 294 356 310 342" stroke="#DFFCF3" stroke-width="18" stroke-linecap="round"/>
+  <path d="M177 189L211 173M335 189L301 173" stroke="#B8F5E6" stroke-width="12" stroke-linecap="round" opacity="0.92"/>
+</svg>

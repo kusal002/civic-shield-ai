@@ -30,3 +30,16 @@ export async function saveLocalAttachments(reportId: string, files: File[], atta
   });
   database.close();
 }
+
+export async function getLocalAttachmentFiles(reportId: string) {
+  if (typeof window === "undefined" || !window.indexedDB) return [] as File[];
+  const database = await openDatabase();
+  const records = await new Promise<Array<{ reportId: string; file: File }>>((resolve, reject) => {
+    const transaction = database.transaction(STORE, "readonly");
+    const request = transaction.objectStore(STORE).getAll();
+    request.onsuccess = () => resolve(request.result as Array<{ reportId: string; file: File }>);
+    request.onerror = () => reject(request.error);
+  });
+  database.close();
+  return records.filter((record) => record.reportId === reportId).map((record) => record.file);
+}

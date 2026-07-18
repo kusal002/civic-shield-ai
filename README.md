@@ -493,7 +493,7 @@ The service links are intentionally routed to `/report` and `/emergency`, which 
 The civic reporting workflow now includes:
 
 - A `/report` page with a mobile-friendly civic issue form.
-- Natural-language issue description, location/landmark, time or duration, affected people/area, optional image filename capture, and extra details.
+- Natural-language issue description, location/landmark, time or duration, optional positive count of people affected, visual evidence, and extra details.
 - Zod + React Hook Form validation that keeps required report details useful without asking for unnecessary personal information.
 - Browser-local report persistence through `localStorage`.
 - Local report IDs in the `CS-YYYY-0001` format.
@@ -547,11 +547,57 @@ https://YOUR-VERCEL-PROJECT.vercel.app/api/auth/gmail/callback
 
 The report page now prevents nested forms, so location search works without hydration errors. Reverse geocoding displays both the readable address/locality and exact latitude/longitude after map pinning or current-location selection.
 
+The address input also provides a short, debounced suggestion list while the user types. Live evidence capture uses the device camera directly: users can choose `Take photo` or `Record video`, rather than only opening the general file picker.
+
+Each generated department email carries the full useful report record: report reference, issue description, confirmed location name, latitude/longitude, duration, optional positive affected-person count, optional extra details, and evidence-file count. The reporter can still edit the final draft before approval.
+
+### Owner Gmail sending (hackathon mode)
+
+To send every confirmed report from the CivicShield project owner’s Gmail account—without asking each citizen to connect Gmail—also set:
+
+```text
+GMAIL_REFRESH_TOKEN=your_owner_gmail_refresh_token
+```
+
+The direct-send route uses this token server-side to obtain a short-lived Gmail access token. Citizens still must confirm the exact recipient, message, and attachments before sending. Evidence files saved for the report are included as email attachments. After Gmail accepts the message, CivicShield stores the local status as `delivery confirmed` and shows a receipt with the Gmail message ID. This is not a claim that a department has acted on or resolved the issue.
+
+### Government-recipient directory
+
+`src/lib/data/department-directory.json` is the source-tracked recipient directory. It currently contains verified West Bengal pilot contacts for Bidhannagar, Kolkata, and the state Public Works Department. CivicShield matches the confirmed location and routed issue category, then pre-fills a single editable official address. Every record retains its official source URL and last-verification date.
+
+India-wide coverage must be added city-by-city from official municipal or state sources; the app intentionally leaves the recipient blank when there is no verified match rather than guessing an authority address.
+
 ### Email boundary
 
-The citizen must still review the recipient and message, check the authorization box, and connect their Gmail before CivicShield sends a message. The Gmail access token is kept in a secure, HTTP-only browser cookie for its short access-token lifetime. The normal fallback remains a citizen-approved `mailto:` draft. Attachments are kept on the device and must be added manually; direct Gmail attachment delivery belongs to the cloud-storage milestone.
+The citizen must still review the recipient and message and check the authorization box before CivicShield sends a message. With `GMAIL_REFRESH_TOKEN`, the project owner Gmail is used; without it, a citizen may connect Gmail for the short access-token lifetime. The normal fallback remains a citizen-approved `mailto:` draft.
 
 **Current stopping point:** The civic form, map, local evidence, AI brief, and editable email draft are implemented. The dedicated immediate-emergency route and the public/moderator dashboard remain the next planned milestones.
+
+### Next milestone: persistent public tracking
+
+Browser-local reports are intentionally temporary. The next build step is a hosted PostgreSQL database (Supabase free tier) and a public tracking dashboard. The public view will show a report reference, general location, category, timestamps, and verified workflow status. Raw evidence, exact personal text, and moderator actions must remain private until reviewed; only authorised moderators can change a report from `delivery confirmed` to later status stages.
+
+### Step 8 delivery notes: Supabase persistence and public tracking
+
+- New reports are created through a server-side Supabase route and receive a globally unique `CS-YYYY-XXXXXXXX` public reference.
+- AI classification and Gmail delivery-confirmed status are written back to the persistent report record.
+- `/dashboard` is a public, server-rendered accountability feed. It exposes only report reference, routed category, urgency, location label, timestamps, and workflow status—not raw report prose, evidence, email addresses, or Gmail message IDs.
+- `supabase/schema.sql` creates the reports table and immutable status-event table. Row Level Security is enabled with no browser policies; only server routes using `SUPABASE_SERVICE_ROLE_KEY` can access the database.
+- The report screen fails clearly if database setup is incomplete instead of silently pretending that the report is publicly persisted.
+
+#### Activate the database
+
+1. In Supabase, open **SQL Editor** → **New query**.
+2. Copy all contents of `supabase/schema.sql`, run it once, and confirm both tables appear in the Table Editor.
+3. Restart `npm run dev`, submit a new report, complete its analysis, and open `/dashboard`.
+
+Required environment variables are documented in `.env.example`:
+
+```text
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+```
 
 ## MVP Boundary
 

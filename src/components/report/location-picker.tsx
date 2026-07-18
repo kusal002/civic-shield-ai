@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { Crosshair, LoaderCircle, MapPin, Search } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { IncidentLocation } from "@/types/report";
@@ -19,6 +19,8 @@ const DEFAULT_LOCATION: IncidentLocation = {
   source: "manual",
 };
 
+type LocationSuggestion = { label: string; latitude: number; longitude: number };
+
 export function LocationPicker({
   error,
   onChange,
@@ -32,10 +34,26 @@ export function LocationPicker({
   const [query, setQuery] = useState(value?.label ?? "");
   const [searching, setSearching] = useState(false);
   const [notice, setNotice] = useState("");
+  const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
+
+  useEffect(() => {
+    if (query.trim().length < 3) {
+      return;
+    }
+    let active = true;
+    const timer = window.setTimeout(() => {
+      void fetch(`/api/geocode?q=${encodeURIComponent(query.trim())}`)
+        .then((response) => response.json())
+        .then((result: { results?: LocationSuggestion[] }) => { if (active) setSuggestions(result.results ?? []); })
+        .catch(() => { if (active) setSuggestions([]); });
+    }, 450);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [query]);
 
   function confirmLocation(next: IncidentLocation) {
     setLocation(next);
     setQuery(next.label);
+    setSuggestions([]);
     onChange(next);
     setNotice("Location selected. Please confirm it is accurate before continuing.");
   }
@@ -49,9 +67,10 @@ export function LocationPicker({
     setNotice("");
     try {
       const response = await fetch(`/api/geocode?q=${encodeURIComponent(query.trim())}`);
-      const result = (await response.json()) as { label?: string; latitude?: number; longitude?: number };
-      if (!response.ok || !result.label || result.latitude === undefined || result.longitude === undefined) throw new Error("not found");
-      confirmLocation({ label: result.label, latitude: result.latitude, longitude: result.longitude, source: "search" });
+      const result = (await response.json()) as { results?: LocationSuggestion[] };
+      const firstResult = result.results?.[0];
+      if (!response.ok || !firstResult) throw new Error("not found");
+      confirmLocation({ label: firstResult.label, latitude: firstResult.latitude, longitude: firstResult.longitude, source: "search" });
     } catch {
       setNotice("We could not find that place. Select the point directly on the map instead.");
     } finally {
@@ -98,7 +117,7 @@ export function LocationPicker({
   }
 
   return (
-    <section className="rounded-2xl border border-line bg-[#fbfdfc] p-4 sm:p-5">
+    <section className="isolate overflow-visible rounded-2xl border border-line bg-[#fbfdfc] p-4 sm:p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="flex items-center gap-2 text-sm font-bold text-ink"><MapPin aria-hidden="true" size={16} /> Confirm incident location</p>
@@ -108,27 +127,32 @@ export function LocationPicker({
           <Crosshair aria-hidden="true" size={15} /> Use current location
         </Button>
       </div>
-      <div className="mt-4 flex gap-2">
-        <label className="sr-only" htmlFor="location-search">Search an address or landmark</label>
-        <input
-          id="location-search"
-          className="h-11 min-w-0 flex-1 rounded-xl border border-line bg-white px-3 text-sm text-ink shadow-sm focus:border-brand focus:outline-none"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              void searchLocation();
-            }
-          }}
-          placeholder="Search an address, locality, or landmark"
-        />
-        <Button type="button" size="sm" disabled={searching} onClick={() => void searchLocation()}>
-          {searching ? <LoaderCircle className="animate-spin" aria-hidden="true" size={15} /> : <Search aria-hidden="true" size={15} />}
-          Search
-        </Button>
+      <div className="relative z-[1100] mt-4">
+        <div className="flex gap-2">
+          <div className="min-w-0 flex-1">
+          <label className="sr-only" htmlFor="location-search">Search an address or landmark</label>
+          <input
+            id="location-search"
+            className="h-11 w-full rounded-xl border border-line bg-white px-3 text-sm text-ink shadow-sm focus:border-brand focus:outline-none"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") { event.preventDefault(); void searchLocation(); }
+            }}
+            placeholder="Start typing a street, area, landmark, or city"
+            autoComplete="street-address"
+          />
+          </div>
+          <Button type="button" size="sm" disabled={searching} onClick={() => void searchLocation()}>
+            {searching ? <LoaderCircle className="animate-spin" aria-hidden="true" size={15} /> : <Search aria-hidden="true" size={15} />}
+            Search
+          </Button>
+        </div>
+        {query.trim().length >= 3 && suggestions.length ? <div className="absolute inset-x-0 top-full z-[1100] mt-2 max-h-60 overflow-auto rounded-xl border border-line bg-white p-1 shadow-surface" role="listbox" aria-label="Location suggestions">
+        {suggestions.map((suggestion) => <button key={`${suggestion.latitude}-${suggestion.longitude}`} type="button" role="option" aria-selected={false} className="block w-full rounded-lg px-3 py-2.5 text-left text-sm leading-5 text-ink transition hover:bg-brand-soft focus:bg-brand-soft focus:outline-none" onClick={() => confirmLocation({ ...suggestion, source: "search" })}>{suggestion.label}</button>)}
+        </div> : null}
       </div>
-      <div className="mt-4 overflow-hidden rounded-xl border border-line">
+      <div className="relative z-0 mt-4 overflow-hidden rounded-xl border border-line">
         <LocationMap
           coordinates={{ latitude: location.latitude, longitude: location.longitude }}
           onSelect={({ latitude, longitude }) => void resolveCoordinates(latitude, longitude, "map-pin")}

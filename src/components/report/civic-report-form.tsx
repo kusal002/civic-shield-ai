@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertTriangle, Clock3, FileText, Info, MapPin, ShieldCheck, Upload, Video } from "lucide-react";
+import { AlertTriangle, Clock3, FileText, Info, MapPin, ShieldCheck, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { LocationPicker } from "@/components/report/location-picker";
+import { LiveCapture } from "@/components/report/live-capture";
 import { saveLocalAttachments } from "@/lib/storage/attachments";
 import { getLocalReportsSnapshot, saveLocalReport, subscribeToLocalReports } from "@/lib/storage/reports";
 import type { CivicAttachment, IncidentLocation } from "@/types/report";
@@ -21,7 +22,7 @@ const reportSchema = z.object({
   description: z.string().trim().min(20, "Describe the problem in at least 20 characters.").max(900, "Keep the description under 900 characters for now."),
   location: z.string().trim().min(6, "Confirm a useful location or landmark.").max(180),
   duration: z.string().trim().min(2, "Add when this started or how long it has continued.").max(120),
-  affectedPeople: z.string().trim().max(160).optional(),
+  affectedPeople: z.string().trim().refine((value) => !value || /^[1-9]\d*$/.test(value), "Enter a whole number greater than zero, or leave this blank.").optional(),
   extraDetails: z.string().trim().max(360).optional(),
 });
 
@@ -34,6 +35,7 @@ export function CivicReportForm() {
   const router = useRouter();
   const [selectedLocation, setSelectedLocation] = useState<IncidentLocation | undefined>();
   const [media, setMedia] = useState<MediaPreview[]>([]);
+  const [submissionError, setSubmissionError] = useState("");
   const reportsSnapshot = useSyncExternalStore(subscribeToLocalReports, getLocalReportsSnapshot, () => "[]");
   const savedReportsCount = parseSavedReportsCount(reportsSnapshot);
   const {
@@ -51,7 +53,7 @@ export function CivicReportForm() {
     setValue("location", location.label, { shouldValidate: true });
   }
 
-  function addMedia(files: FileList | null) {
+  function addMedia(files: FileList | File[] | null) {
     if (!files) return;
     const nextMedia = Array.from(files)
       .filter((file) => file.type.startsWith("image/") || file.type.startsWith("video/"))
@@ -59,6 +61,8 @@ export function CivicReportForm() {
       .map((file) => ({ file, url: URL.createObjectURL(file), kind: file.type.startsWith("video/") ? "video" as const : "image" as const }));
     setMedia((current) => [...current, ...nextMedia].slice(0, 4));
   }
+
+  function addCapturedMedia(file: File) { addMedia([file]); }
 
   function removeMedia(url: string) {
     setMedia((current) => {
@@ -73,6 +77,7 @@ export function CivicReportForm() {
       setError("location", { message: "Search, use current location, or pin the incident on the map before continuing." });
       return;
     }
+    setSubmissionError("");
     const attachments: CivicAttachment[] = media.map(({ file, kind }, index) => ({
       id: `ATT-${Date.now()}-${index}`,
       name: file.name,
@@ -80,7 +85,21 @@ export function CivicReportForm() {
       size: file.size,
       kind,
     }));
-    const report = saveLocalReport({ ...values, incidentLocation: selectedLocation, attachments });
+    let reportId: string;
+    try {
+      const response = await fetch("/api/reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ report: { ...values, incidentLocation: selectedLocation, attachments } }),
+      });
+      const result = await response.json() as { reportId?: string; error?: string };
+      if (!response.ok || !result.reportId) throw new Error(result.error ?? "The report could not be saved.");
+      reportId = result.reportId;
+    } catch (error) {
+      setSubmissionError(error instanceof Error ? error.message : "The report could not be saved. Please try again.");
+      return;
+    }
+    const report = saveLocalReport({ ...values, id: reportId, incidentLocation: selectedLocation, attachments });
     try {
       await saveLocalAttachments(report.id, media.map(({ file }) => file), attachments);
     } catch {
@@ -115,8 +134,8 @@ export function CivicReportForm() {
               <FormField error={errors.duration?.message} icon={<Clock3 aria-hidden="true" size={16} />} label="Time or duration">
                 <input className="h-12 w-full rounded-2xl border border-line bg-white px-4 text-sm text-ink shadow-sm transition focus:border-brand focus:outline-none" placeholder="Since morning, 3 days, after heavy rain..." {...register("duration")} />
               </FormField>
-              <FormField error={errors.affectedPeople?.message} label="Affected people or area">
-                <input className="h-12 w-full rounded-2xl border border-line bg-white px-4 text-sm text-ink shadow-sm transition focus:border-brand focus:outline-none" placeholder="Pedestrians, residents, school route..." {...register("affectedPeople")} />
+              <FormField error={errors.affectedPeople?.message} helper="Optional. We include this in the department email only when a number is provided." label="Number of people affected">
+                <input className="h-12 w-full rounded-2xl border border-line bg-white px-4 text-sm text-ink shadow-sm transition focus:border-brand focus:outline-none" inputMode="numeric" min="1" placeholder="Example: 25" type="number" {...register("affectedPeople")} />
               </FormField>
             </div>
 
@@ -133,10 +152,7 @@ export function CivicReportForm() {
                   <Upload aria-hidden="true" size={16} /> Choose image or video
                   <input className="sr-only" type="file" accept="image/*,video/*" multiple onChange={(event) => addMedia(event.target.files)} />
                 </label>
-                <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-brand-soft px-3 text-sm font-semibold text-brand transition hover:bg-[#ccefe3]">
-                  <Video aria-hidden="true" size={16} /> Capture live
-                  <input className="sr-only" type="file" accept="image/*,video/*" capture="environment" onChange={(event) => addMedia(event.target.files)} />
-                </label>
+                <LiveCapture onCapture={addCapturedMedia} />
               </div>
               {media.length ? <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {media.map((item) => <div key={item.url} className="group relative overflow-hidden rounded-xl border border-line bg-white">
@@ -152,9 +168,10 @@ export function CivicReportForm() {
             </FormField>
 
             <div className="flex flex-col gap-4 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
-              <p className="flex gap-2 text-sm leading-6 text-muted"><Info aria-hidden="true" className="mt-1 shrink-0 text-brand" size={16} /> Reports and media are retained on this device for the MVP. Do not include private IDs or personal contact details.</p>
+              <p className="flex gap-2 text-sm leading-6 text-muted"><Info aria-hidden="true" className="mt-1 shrink-0 text-brand" size={16} /> The report is saved for public status tracking; evidence stays on this device for now. Do not include private IDs or personal contact details.</p>
               <Button className="shrink-0" disabled={isSubmitting} size="lg" type="submit"><FileText aria-hidden="true" size={18} /> Analyze and prepare report</Button>
             </div>
+            {submissionError ? <p className="rounded-xl border border-[#efbdb6] bg-[#fff4f1] px-4 py-3 text-sm font-medium text-danger" role="alert">{submissionError}</p> : null}
           </form>
         </CardContent>
       </Card>

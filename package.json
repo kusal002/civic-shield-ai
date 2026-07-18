@@ -12,6 +12,7 @@
   "dependencies": {
     "@hookform/resolvers": "latest",
     "@radix-ui/react-slot": "latest",
+    "@supabase/supabase-js": "^2.110.7",
     "@types/leaflet": "^1.9.21",
     "class-variance-authority": "latest",
     "clsx": "latest",

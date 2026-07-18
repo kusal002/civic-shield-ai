@@ -63,6 +63,7 @@ export default function Home() {
           <a className="transition-colors hover:text-brand" href="#trust">
             Why CivicShield
           </a>
+          <Link className="transition-colors hover:text-brand" href="/dashboard">Public dashboard</Link>
         </nav>
 
         <Button asChild className="hidden sm:inline-flex" size="sm">

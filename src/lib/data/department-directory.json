@@ -1,0 +1,29 @@
+[
+  {
+    "id": "bidhannagar-municipal-corporation",
+    "authority": "Bidhannagar Municipal Corporation",
+    "email": "bidhannagar.corporation@gmail.com",
+    "categories": ["Roads and infrastructure", "Drainage and water", "Sanitation and waste", "Electrical safety", "Traffic safety", "General civic issue"],
+    "locationMatchers": ["bidhannagar", "salt lake", "sector v", "rajarhat", "gopalpur", "new town"],
+    "sourceUrl": "https://bmcwbgov.in/index.php/contact-us",
+    "lastVerified": "2026-07-18"
+  },
+  {
+    "id": "kolkata-municipal-corporation",
+    "authority": "Kolkata Municipal Corporation",
+    "email": "mayor@kmcgov.in",
+    "categories": ["Roads and infrastructure", "Drainage and water", "Sanitation and waste", "Electrical safety", "Traffic safety", "General civic issue"],
+    "locationMatchers": ["kolkata", "calcutta"],
+    "sourceUrl": "https://www.kmcgov.in/KMCPortal/jsp/StatepublicList.jsp",
+    "lastVerified": "2026-07-18"
+  },
+  {
+    "id": "west-bengal-public-works",
+    "authority": "Public Works Department, Government of West Bengal",
+    "email": "secpwd@wb.gov.in",
+    "categories": ["Roads and infrastructure"],
+    "locationMatchers": ["west bengal"],
+    "sourceUrl": "https://pwd.wb.gov.in/contact-us?searchByName=Smt.+Antara+Acharya+%28I.A.S.%29",
+    "lastVerified": "2026-07-18"
+  }
+]

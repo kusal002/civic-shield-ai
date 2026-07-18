@@ -10,14 +10,19 @@ export async function GET(request: Request) {
   try {
     const endpoint = latitude && longitude
       ? `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}`
-      : `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(query ?? "")}`;
+      : `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5&q=${encodeURIComponent(query ?? "")}`;
     const response = await fetch(endpoint, {
       headers: { "User-Agent": "CivicShieldAI-Hackathon/0.1 (contact: project-demo)" },
       next: { revalidate: 86400 },
     });
     if (!response.ok) throw new Error("Geocoder request failed");
     const payload = await response.json() as { display_name?: string; lat?: string; lon?: string } | Array<{ display_name: string; lat: string; lon: string }>;
-    const result = Array.isArray(payload) ? payload[0] : payload;
+    if (Array.isArray(payload)) {
+      const results = payload.map((result) => ({ label: result.display_name, latitude: Number(result.lat), longitude: Number(result.lon) }));
+      if (!results.length) return NextResponse.json({ error: "Location not found." }, { status: 404 });
+      return NextResponse.json({ results });
+    }
+    const result = payload;
     if (!result) return NextResponse.json({ error: "Location not found." }, { status: 404 });
     return NextResponse.json({ label: result.display_name, latitude: Number(result.lat), longitude: Number(result.lon) });
   } catch {

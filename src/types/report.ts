@@ -30,6 +30,12 @@ export interface CivicAttachment {
   kind: "image" | "video";
 }
 
+export interface EmailDelivery {
+  recipient: string;
+  messageId?: string;
+  sentAt: string;
+}
+
 export interface DepartmentRoute {
   name: string;
   category: string;
@@ -58,6 +64,7 @@ export interface CivicReport {
   affectedPeople?: string;
   extraDetails?: string;
   attachments?: CivicAttachment[];
+  emailDelivery?: EmailDelivery;
   analysis?: SafetyAnalysis;
   category?: string;
   urgency?: UrgencyLevel;
@@ -67,6 +74,7 @@ export interface CivicReport {
 }
 
 export interface CivicReportInput {
+  id?: string;
   description: string;
   location: string;
   duration: string;
@@ -74,4 +82,14 @@ export interface CivicReportInput {
   affectedPeople?: string;
   extraDetails?: string;
   attachments?: CivicAttachment[];
+}
+
+export interface PublicCivicReport {
+  id: string;
+  category: string | null;
+  urgency: UrgencyLevel | null;
+  status: ReportStatus;
+  locationLabel: string;
+  createdAt: string;
+  updatedAt: string;
 }

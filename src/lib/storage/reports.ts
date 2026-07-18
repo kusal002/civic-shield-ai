@@ -1,6 +1,6 @@
 "use client";
 
-import type { CivicReport, CivicReportInput } from "@/types/report";
+import type { CivicReport, CivicReportInput, EmailDelivery } from "@/types/report";
 
 const STORAGE_KEY = "civicshield.localReports";
 const REPORTS_CHANGED_EVENT = "civicshield:reports-changed";
@@ -77,7 +77,7 @@ export function saveLocalReport(input: CivicReportInput) {
   const existingReports = readStoredReports();
   const now = new Date().toISOString();
   const report: CivicReport = {
-    id: createReportId(existingReports),
+    id: input.id ?? createReportId(existingReports),
     description: input.description.trim(),
     location: input.location.trim(),
     incidentLocation: input.incidentLocation,
@@ -100,6 +100,16 @@ export function saveReportAnalysis(reportId: string, analysis: CivicReport["anal
     report.id === reportId
       ? { ...report, analysis, updatedAt: new Date().toISOString() }
       : report,
+  );
+  writeStoredReports(updatedReports);
+  return updatedReports.find((report) => report.id === reportId) ?? null;
+}
+
+export function markReportEmailSent(reportId: string, delivery: Omit<EmailDelivery, "sentAt">) {
+  const reports = readStoredReports();
+  const now = new Date().toISOString();
+  const updatedReports = reports.map((report) =>
+    report.id === reportId ? { ...report, status: "delivery-confirmed" as const, emailDelivery: { ...delivery, sentAt: now }, updatedAt: now } : report,
   );
   writeStoredReports(updatedReports);
   return updatedReports.find((report) => report.id === reportId) ?? null;

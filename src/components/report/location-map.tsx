@@ -24,7 +24,7 @@ function MapViewportSync({ coordinates }: { coordinates: Coordinates }) {
 
 export function LocationMap({ coordinates, onSelect }: { coordinates: Coordinates; onSelect: (coordinates: Coordinates) => void }) {
   return (
-    <MapContainer center={[coordinates.latitude, coordinates.longitude]} zoom={15} className="h-64 w-full" scrollWheelZoom={false}>
+    <MapContainer center={[coordinates.latitude, coordinates.longitude]} zoom={15} className="location-map h-64 w-full" scrollWheelZoom={false}>
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

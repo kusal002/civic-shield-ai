@@ -64,3 +64,11 @@ select {
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
+
+/* Leaflet uses high z-index values internally. Keep each report map in its own
+   low-level stacking context so address suggestions can safely overlay it. */
+.location-map {
+  isolation: isolate;
+  position: relative;
+  z-index: 0;
+}

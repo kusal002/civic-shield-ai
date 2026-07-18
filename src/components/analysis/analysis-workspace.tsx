@@ -1,20 +1,22 @@
 "use client";
 
-import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardCheck, Copy, FileText, LoaderCircle, Mail, MapPin, RefreshCw, Send, ShieldAlert, Sparkles } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardCheck, Copy, FileText, Home, LoaderCircle, Mail, MapPin, RefreshCw, Send, ShieldAlert, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { getLocalReport, saveReportAnalysis } from "@/lib/storage/reports";
+import { getLocalAttachmentFiles } from "@/lib/storage/attachments";
+import { findDepartmentContact } from "@/lib/data/department-directory";
+import { getLocalReport, markReportEmailSent, saveReportAnalysis } from "@/lib/storage/reports";
 import type { CivicReport, SafetyAnalysis } from "@/types/report";
 
 export function AnalysisWorkspace({ reportId }: { reportId: string }) {
-  const [report, setReport] = useState<CivicReport | null>(() => getLocalReport(reportId));
-  const [analysis, setAnalysis] = useState<SafetyAnalysis | null>(() => getLocalReport(reportId)?.analysis ?? null);
-  const [loading, setLoading] = useState(() => Boolean(getLocalReport(reportId) && !getLocalReport(reportId)?.analysis));
-  const [error, setError] = useState(() => getLocalReport(reportId) ? "" : "This local report was not found in this browser.");
+  const [report, setReport] = useState<CivicReport | null>(null);
+  const [analysis, setAnalysis] = useState<SafetyAnalysis | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   async function generateReport(nextReport: CivicReport, variation = 0) {
     setLoading(true);
@@ -26,6 +28,11 @@ export function AnalysisWorkspace({ reportId }: { reportId: string }) {
       const updated = saveReportAnalysis(nextReport.id, result);
       setAnalysis(result);
       if (updated) setReport(updated);
+      void fetch(`/api/reports/${encodeURIComponent(nextReport.id)}/analysis`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ analysis: result }),
+      });
     } catch {
       setError("CivicShield could not prepare this analysis. Please try again.");
     } finally {
@@ -34,11 +41,28 @@ export function AnalysisWorkspace({ reportId }: { reportId: string }) {
   }
 
   useEffect(() => {
+    let active = true;
+    void Promise.resolve().then(() => {
+      const saved = getLocalReport(reportId);
+      if (!active) return;
+      if (!saved) {
+        setError("This local report was not found in this browser.");
+        setLoading(false);
+        return;
+      }
+      setReport(saved);
+      if (saved.analysis) {
+        setAnalysis(saved.analysis);
+        setLoading(false);
+      }
+    });
+    return () => { active = false; };
+  }, [reportId]);
+
+  useEffect(() => {
     if (!report || analysis) return;
     const reportToAnalyze = report;
-    async function loadAnalysis() {
-      await generateReport(reportToAnalyze);
-    }
+    async function loadAnalysis() { await generateReport(reportToAnalyze); }
     void loadAnalysis();
   }, [report, analysis]);
 
@@ -59,37 +83,36 @@ export function AnalysisWorkspace({ reportId }: { reportId: string }) {
 
             <Card className="rounded-3xl"><CardHeader className="p-6 pb-0 sm:p-8 sm:pb-0"><div className="flex items-center justify-between gap-3"><div><p className="eyebrow">Formal complaint</p><h2 className="mt-2 font-display text-2xl font-bold tracking-tight">Ready for review</h2></div><CopyButton text={analysis.formalComplaint} /></div></CardHeader><CardContent className="p-6 sm:p-8"><pre className="whitespace-pre-wrap rounded-2xl border border-line bg-[#fbfdfc] p-4 font-sans text-sm leading-6 text-[#426058]">{analysis.formalComplaint}</pre></CardContent></Card>
 
-            <MailComposer key={analysis.emailBody} analysis={analysis} reportId={report.id} onRegenerate={() => void generateReport(report, Date.now())} />
+            <MailComposer key={analysis.emailBody} analysis={analysis} report={report} reportId={report.id} onRegenerate={() => void generateReport(report, Date.now())} />
           </div>
-          <aside className="space-y-5"><Card className="rounded-3xl"><CardContent className="p-6"><p className="eyebrow">Report reference</p><p className="mt-2 font-display text-2xl font-bold">{report.id}</p><p className="mt-4 text-sm leading-6 text-muted">Saved locally on {new Date(report.createdAt).toLocaleString()}.</p></CardContent></Card><Card className="rounded-3xl border-[#ead9b8] bg-[#fffaf0]"><CardContent className="p-6"><Badge tone="caution" className="gap-1.5"><AlertTriangle aria-hidden="true" size={14} /> Honest routing</Badge><p className="mt-4 text-sm leading-6 text-[#725019]">CivicShield suggests the responsible department but does not claim it has received your report. You select and confirm the official email recipient before sending.</p></CardContent></Card></aside>
+          <aside className="space-y-5"><Card className="rounded-3xl"><CardContent className="p-6"><p className="eyebrow">Report reference</p><p className="mt-2 font-display text-2xl font-bold">{report.id}</p><p className="mt-4 text-sm leading-6 text-muted">Saved locally on {new Date(report.createdAt).toLocaleString()}.</p></CardContent></Card><Card className="rounded-3xl border-[#ead9b8] bg-[#fffaf0]"><CardContent className="p-6"><Badge tone="caution" className="gap-1.5"><AlertTriangle aria-hidden="true" size={14} /> Honest routing</Badge><p className="mt-4 text-sm leading-6 text-[#725019]">CivicShield can prefill a source-tracked address only where its directory has a verified match. You can always correct the recipient before sending; a sent email is not proof that a department has acted.</p></CardContent></Card></aside>
         </div>
       </div>
     </main>
   );
 }
 
-function MailComposer({ analysis, onRegenerate, reportId }: { analysis: SafetyAnalysis; onRegenerate: () => void; reportId: string }) {
-  const [recipient, setRecipient] = useState("");
+function MailComposer({ analysis, onRegenerate, report, reportId }: { analysis: SafetyAnalysis; onRegenerate: () => void; report: CivicReport; reportId: string }) {
+  const departmentContact = findDepartmentContact(report, analysis.route);
+  const [recipient, setRecipient] = useState(() => departmentContact?.email ?? "");
   const [subject, setSubject] = useState(analysis.emailSubject);
   const [body, setBody] = useState(analysis.emailBody);
   const [confirmed, setConfirmed] = useState(false);
   const [copied, setCopied] = useState(false);
   const [gmailStatus, setGmailStatus] = useState<"checking" | "connected" | "disconnected">("checking");
+  const [ownerConfigured, setOwnerConfigured] = useState(false);
   const [sendStatus, setSendStatus] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [delivery, setDelivery] = useState<{ id?: string; recipient?: string; sentAt?: string } | null>(() => report.emailDelivery ? { id: report.emailDelivery.messageId, recipient: report.emailDelivery.recipient, sentAt: report.emailDelivery.sentAt } : report.status === "delivery-confirmed" ? {} : null);
 
   useEffect(() => {
     let active = true;
     void fetch("/api/auth/gmail/status")
       .then((response) => response.json())
-      .then((data: { connected?: boolean }) => { if (active) setGmailStatus(data.connected ? "connected" : "disconnected"); })
+      .then((data: { connected?: boolean; ownerConfigured?: boolean }) => { if (active) { setOwnerConfigured(Boolean(data.ownerConfigured)); setGmailStatus(data.connected || data.ownerConfigured ? "connected" : "disconnected"); } })
       .catch(() => { if (active) setGmailStatus("disconnected"); });
     return () => { active = false; };
   }, []);
-
-  function openMail() {
-    if (!recipient || !confirmed) return;
-    window.location.href = `mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  }
 
   async function copyDraft() {
     await navigator.clipboard.writeText(`To: ${recipient}\nSubject: ${subject}\n\n${body}`);
@@ -99,34 +122,72 @@ function MailComposer({ analysis, onRegenerate, reportId }: { analysis: SafetyAn
   async function sendWithGmail() {
     if (!recipient || !confirmed) return;
     setSendStatus("Sending through your connected Gmail…");
+    setIsSending(true);
     try {
-      const response = await fetch("/api/send-email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: recipient, subject, body }) });
+      const formData = new FormData();
+      formData.set("to", recipient);
+      formData.set("subject", subject);
+      formData.set("body", body);
+      const attachments = await getLocalAttachmentFiles(reportId);
+      attachments.forEach((attachment) => formData.append("attachments", attachment));
+      const response = await fetch("/api/send-email", { method: "POST", body: formData });
       const result = await response.json() as { id?: string; error?: string };
       if (!response.ok) throw new Error(result.error ?? "Email could not be sent.");
-      setSendStatus(`Sent from Gmail. Message ID: ${result.id}`);
+      const savedDelivery = markReportEmailSent(reportId, { messageId: result.id, recipient });
+      void fetch(`/api/reports/${encodeURIComponent(reportId)}/delivery`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId: result.id, recipient }),
+      });
+      setDelivery({ id: result.id, recipient, sentAt: savedDelivery?.emailDelivery?.sentAt });
+      setSendStatus("");
     } catch (error) {
       setSendStatus(error instanceof Error ? error.message : "Email could not be sent.");
+    } finally {
+      setIsSending(false);
     }
   }
 
-  const disabled = !recipient || !confirmed;
+  const disabled = !recipient || !confirmed || isSending;
+  if (delivery) {
+    return <Card className="rounded-3xl border-[#c7e7dc] bg-[#fbfefc]">
+      <CardContent className="p-6 sm:p-8">
+        <span className="grid size-12 place-items-center rounded-2xl bg-brand-soft text-brand"><CheckCircle2 aria-hidden="true" size={25} /></span>
+        <p className="mt-5 eyebrow">Delivery recorded</p>
+        <h2 className="mt-2 font-display text-2xl font-bold tracking-tight">Your report email has been handed to Gmail.</h2>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">{delivery.recipient ? <>CivicShield sent the confirmed email to <strong className="text-ink">{delivery.recipient}</strong> and marked this report as </> : <>CivicShield found a previously recorded successful send and marked this report as </>}<strong className="text-ink">delivery confirmed</strong> on this device.</p>
+        <div className="mt-5 rounded-2xl border border-[#c7e7dc] bg-white p-4 text-sm leading-6 text-muted">
+          <p><strong className="text-ink">What this confirms:</strong> Gmail accepted the message for delivery.</p>
+          <p className="mt-2"><strong className="text-ink">What it does not confirm:</strong> that the department has inspected, acted on, or resolved the issue. Keep the report reference and follow up if no acknowledgement arrives.</p>
+          {delivery.id ? <p className="mt-2 font-mono text-xs text-[#426058]">Gmail message ID: {delivery.id}</p> : null}
+          {delivery.sentAt ? <p className="mt-2 text-xs text-[#426058]">Recorded on this device: {new Date(delivery.sentAt).toLocaleString()}</p> : null}
+        </div>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Button asChild><Link href="/"><Home aria-hidden="true" size={16} /> Return home</Link></Button>
+          <Button asChild variant="outline"><Link href="/report"><FileText aria-hidden="true" size={16} /> Report another issue</Link></Button>
+        </div>
+      </CardContent>
+    </Card>;
+  }
   return (
     <Card className="rounded-3xl border-[#c7e7dc]">
       <CardHeader className="p-6 pb-0 sm:p-8 sm:pb-0">
         <p className="eyebrow">Department email draft</p>
         <h2 className="mt-2 font-display text-2xl font-bold tracking-tight">Review before you send</h2>
-        <p className="mt-2 text-sm leading-6 text-muted">CivicShield selected <strong>{analysis.route.name}</strong>. Add the verified official recipient for your city, then approve the final email yourself.</p>
+        <p className="mt-2 text-sm leading-6 text-muted">CivicShield selected <strong>{analysis.route.name}</strong>. {departmentContact ? "A verified directory match is prefilled below; review it before approval." : "No verified directory match is available for this place, so add an official recipient before approval."}</p>
       </CardHeader>
       <CardContent className="space-y-4 p-6 sm:p-8">
         <label className="block text-sm font-bold text-ink">Official department email<input className="mt-2 h-12 w-full rounded-xl border border-line bg-white px-3 text-sm font-normal focus:border-brand focus:outline-none" value={recipient} onChange={(event) => setRecipient(event.target.value)} placeholder="verified-department@example.gov.in" type="email" /></label>
+        {departmentContact ? <p className="rounded-xl border border-[#c7e7dc] bg-brand-soft px-3 py-2 text-xs leading-5 text-[#215c50]">Prefilled for <strong>{departmentContact.authority}</strong>; verified {departmentContact.lastVerified}. <a className="font-semibold underline" href={departmentContact.sourceUrl} rel="noreferrer" target="_blank">View official source</a></p> : null}
         <label className="block text-sm font-bold text-ink">Subject<input className="mt-2 h-12 w-full rounded-xl border border-line bg-white px-3 text-sm font-normal focus:border-brand focus:outline-none" value={subject} onChange={(event) => setSubject(event.target.value)} /></label>
         <label className="block text-sm font-bold text-ink">Message<textarea className="mt-2 min-h-64 w-full rounded-xl border border-line bg-white px-3 py-3 text-sm font-normal leading-6 focus:border-brand focus:outline-none" value={body} onChange={(event) => setBody(event.target.value)} /></label>
         <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={onRegenerate}><RefreshCw aria-hidden="true" size={16} /> Generate another draft</Button><Button type="button" variant="outline" onClick={copyDraft}><Copy aria-hidden="true" size={16} /> {copied ? "Copied" : "Copy draft"}</Button></div>
         <label className="flex gap-3 rounded-2xl border border-line bg-[#fbfdfc] p-4 text-sm leading-6 text-muted"><input className="mt-1 size-4 accent-[#076b5a]" type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />I have checked the recipient and final message. I authorize CivicShield to send this exact email from my connected Gmail account.</label>
-        {gmailStatus === "connected" ? <Button type="button" size="lg" disabled={disabled} onClick={() => void sendWithGmail()}><Send aria-hidden="true" size={18} /> Confirm and send from Gmail</Button> : <Button asChild size="lg" disabled={gmailStatus === "checking"}><Link href={`/api/auth/gmail/connect?returnTo=${encodeURIComponent(`/analysis/${reportId}`)}`}><Mail aria-hidden="true" size={18} /> {gmailStatus === "checking" ? "Checking Gmail…" : "Connect Gmail to send"}</Link></Button>}
-        <Button type="button" variant="outline" disabled={disabled} onClick={openMail}>Open in my email app instead</Button>
+        <div className="pt-2">
+          {gmailStatus === "connected" ? <Button className="w-full sm:w-auto" type="button" size="lg" disabled={disabled} onClick={() => void sendWithGmail()}><Send aria-hidden="true" size={18} /> {isSending ? "Sending confirmed email…" : ownerConfigured ? "Confirm and send from CivicShield Gmail" : "Confirm and send from Gmail"}</Button> : <Button asChild className="w-full sm:w-auto" size="lg" disabled={gmailStatus === "checking"}><Link href={`/api/auth/gmail/connect?returnTo=${encodeURIComponent(`/analysis/${reportId}`)}`}><Mail aria-hidden="true" size={18} /> {gmailStatus === "checking" ? "Checking Gmail…" : "Connect Gmail to send"}</Link></Button>}
+        </div>
         {sendStatus ? <p className="rounded-xl bg-brand-soft px-3 py-2 text-sm font-medium text-brand" role="status">{sendStatus}</p> : null}
-        <p className="text-xs leading-5 text-muted">Attachments remain stored on this device. Gmail API attachment delivery will be added with the permanent cloud-storage milestone.</p>
+        <p className="text-xs leading-5 text-muted">{ownerConfigured ? "This email and its locally saved evidence files will be sent from the CivicShield project Gmail account after your confirmation." : "Connect Gmail to send the message and its locally saved evidence files directly."}</p>
       </CardContent>
     </Card>
   );

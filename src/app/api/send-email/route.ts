@@ -36,11 +36,12 @@ export async function POST(request: Request) {
   const token = ownerToken ?? connectedUserToken;
   if (!token) return NextResponse.json({ error: "The CivicShield Gmail sender is not configured." }, { status: 401 });
   const formData = await request.formData();
-  const to = formData.get("to")?.toString();
+  const configuredInbox = process.env.HACKATHON_INBOX_EMAIL || "kushalkg0000@gmail.com";
+  const to = configuredInbox;
   const subject = formData.get("subject")?.toString();
   const body = formData.get("body")?.toString();
   const attachments = formData.getAll("attachments").filter((value): value is File => value instanceof File);
-  if (!to || !/^\S+@\S+\.\S+$/.test(to) || !subject || !body) return NextResponse.json({ error: "Provide a valid recipient, subject, and message." }, { status: 400 });
+  if (!/^\S+@\S+\.\S+$/.test(to) || !subject || !body) return NextResponse.json({ error: "Provide a valid background inbox, subject, and message." }, { status: 400 });
 
   const response = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
     method: "POST",
@@ -49,5 +50,5 @@ export async function POST(request: Request) {
   });
   const data = await response.json() as { id?: string; error?: { message?: string } };
   if (!response.ok) return NextResponse.json({ error: data.error?.message ?? "Gmail could not send this message." }, { status: response.status });
-  return NextResponse.json({ id: data.id });
+  return NextResponse.json({ id: data.id, deliveredTo: "CivicShield inbox" });
 }

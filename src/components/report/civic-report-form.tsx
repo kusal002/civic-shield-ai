@@ -2,11 +2,10 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, Clock3, FileText, Info, MapPin, ShieldCheck, Upload } from "lucide-react";
-import Link from "next/link";
+import { AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, Clock3, FileText, Info, ShieldCheck, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
 import { Badge } from "@/components/ui/badge";
@@ -43,10 +42,10 @@ export function CivicReportForm() {
     handleSubmit,
     setError,
     setValue,
-    watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<ReportFormValues>({ resolver: zodResolver(reportSchema), defaultValues });
-  const durationValue = watch("duration");
+  const durationValue = useWatch({ control, name: "duration" });
 
   useEffect(() => () => media.forEach((item) => URL.revokeObjectURL(item.url)), [media]);
 
@@ -182,7 +181,6 @@ export function CivicReportForm() {
       <aside className="space-y-5">
         <Card className="rounded-3xl"><CardContent className="p-6"><div className="flex items-center justify-between gap-4"><div><p className="eyebrow">Saved locally</p><p className="mt-2 font-display text-3xl font-bold">{savedReportsCount}</p></div><span className="grid size-11 place-items-center rounded-2xl bg-brand-soft text-brand"><FileText aria-hidden="true" size={21} /></span></div><p className="mt-4 text-sm leading-6 text-muted">Your report is stored in this browser before an AI result is generated.</p></CardContent></Card>
         <Card className="rounded-3xl border-[#ead9b8] bg-[#fffaf0]"><CardContent className="p-6"><Badge tone="caution" className="gap-1.5"><AlertTriangle aria-hidden="true" size={14} /> Safety note</Badge><h2 className="mt-4 font-display text-xl font-bold tracking-tight">Immediate danger needs a call first.</h2><p className="mt-3 text-sm leading-6 text-[#725019]">If there is fire, injury, collapse, or a live electrical danger, use emergency help and call 112—do not wait for this form.</p></CardContent></Card>
-        <Button asChild className="w-full" variant="outline"><Link href="/"><MapPin aria-hidden="true" size={16} /> Back to home</Link></Button>
       </aside>
     </div>
   );

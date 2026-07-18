@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, BellRing, CheckCircle2, Clock3, MapPin, ShieldCheck, Sparkles, Venus } from "lucide-react";
+import { AlertTriangle, BellRing, Clock3, MapPin, ShieldCheck, Sparkles, Venus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
@@ -21,10 +21,7 @@ export function LocationSafetySnapshot({ compact = false }: { compact?: boolean 
   const [status, setStatus] = useState<"requesting" | "loading" | "ready" | "blocked">("requesting");
 
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setStatus("blocked");
-      return;
-    }
+    if (!navigator.geolocation) return;
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -42,11 +39,12 @@ export function LocationSafetySnapshot({ compact = false }: { compact?: boolean 
 
   useEffect(() => {
     if (!coordinates) return;
+    const { latitude, longitude } = coordinates;
     const controller = new AbortController();
 
     async function loadLocationName() {
       try {
-        const response = await fetch(`/api/geocode?lat=${coordinates.latitude}&lon=${coordinates.longitude}`, { signal: controller.signal });
+        const response = await fetch(`/api/geocode?lat=${latitude}&lon=${longitude}`, { signal: controller.signal });
         const payload = await response.json() as { label?: string };
         if (response.ok && payload.label) setLocationLabel(payload.label);
       } catch {
@@ -60,14 +58,15 @@ export function LocationSafetySnapshot({ compact = false }: { compact?: boolean 
 
   useEffect(() => {
     if (!coordinates) return;
+    const { latitude, longitude } = coordinates;
     const controller = new AbortController();
 
     async function loadNearbySignals() {
       setStatus("loading");
       try {
         const [civicResponse, emergencyResponse] = await Promise.all([
-          fetch(`/api/public-reports?lat=${coordinates.latitude}&lon=${coordinates.longitude}&radiusKm=5`, { signal: controller.signal }),
-          fetch(`/api/emergency-reports?lat=${coordinates.latitude}&lon=${coordinates.longitude}&radiusKm=5`, { signal: controller.signal }),
+          fetch(`/api/public-reports?lat=${latitude}&lon=${longitude}&radiusKm=5`, { signal: controller.signal }),
+          fetch(`/api/emergency-reports?lat=${latitude}&lon=${longitude}&radiusKm=5`, { signal: controller.signal }),
         ]);
         const civicPayload = await civicResponse.json() as { reports?: PublicCivicReport[] };
         const emergencyPayload = await emergencyResponse.json() as { reports?: EmergencyReport[] };

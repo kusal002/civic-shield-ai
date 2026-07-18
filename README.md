@@ -645,6 +645,16 @@ Supabase-backed public tracking is now implemented for the hackathon MVP. The ne
 2. Copy all contents of `supabase/schema.sql`, run it once, and confirm both tables appear in the Table Editor.
 3. Restart `npm run dev`, submit a new report, complete its analysis, and open `/dashboard`.
 
+### Latest merge verification — 18 July 2026
+
+After the dashboard and emergency-flow merge, the location-driven dashboard and landing safety snapshot were updated to keep a stable coordinate value inside asynchronous requests. This removes TypeScript nullability failures during the production build.
+
+Verified successfully:
+
+- `npm run typecheck`
+- `npm run lint`
+- `npm run build`
+
 Required environment variables are documented in `.env.example`:
 
 ```text

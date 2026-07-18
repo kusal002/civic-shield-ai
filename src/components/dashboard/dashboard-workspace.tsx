@@ -25,12 +25,13 @@ export function DashboardWorkspace() {
 
   useEffect(() => {
     if (!coordinates) return;
+    const { latitude, longitude } = coordinates;
     const controller = new AbortController();
 
     async function loadReports() {
       setStatus("loading");
       try {
-        const response = await fetch(`/api/public-reports?lat=${coordinates.latitude}&lon=${coordinates.longitude}&radiusKm=10`, { signal: controller.signal });
+        const response = await fetch(`/api/public-reports?lat=${latitude}&lon=${longitude}&radiusKm=10`, { signal: controller.signal });
         const payload = await response.json() as { reports?: PublicCivicReport[]; error?: string };
         if (!response.ok) throw new Error(payload.error ?? "Reports could not be loaded.");
         setReports(payload.reports ?? []);
@@ -49,11 +50,12 @@ export function DashboardWorkspace() {
 
   useEffect(() => {
     if (!coordinates) return;
+    const { latitude, longitude } = coordinates;
     const controller = new AbortController();
 
     async function loadLocationName() {
       try {
-        const response = await fetch(`/api/geocode?lat=${coordinates.latitude}&lon=${coordinates.longitude}`, { signal: controller.signal });
+        const response = await fetch(`/api/geocode?lat=${latitude}&lon=${longitude}`, { signal: controller.signal });
         const payload = await response.json() as { label?: string };
         if (response.ok && payload.label) setLocationLabel(payload.label);
       } catch {

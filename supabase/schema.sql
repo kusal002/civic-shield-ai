@@ -48,13 +48,24 @@ create table if not exists public.emergency_reports (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.community_verifications (
+  id bigint generated always as identity primary key,
+  report_id text not null references public.civic_reports(report_id) on delete cascade,
+  client_token text not null,
+  verdict text not null check (verdict in ('verified', 'disputed')),
+  created_at timestamptz not null default now(),
+  unique (report_id, client_token)
+);
+
 create index if not exists civic_reports_public_created_idx on public.civic_reports (public_visible, created_at desc);
 create index if not exists report_status_events_report_idx on public.report_status_events (report_id, created_at desc);
 create index if not exists emergency_reports_public_created_idx on public.emergency_reports (public_visible, created_at desc);
+create index if not exists community_verifications_report_idx on public.community_verifications (report_id, created_at desc);
 
 alter table public.civic_reports enable row level security;
 alter table public.report_status_events enable row level security;
 alter table public.emergency_reports enable row level security;
+alter table public.community_verifications enable row level security;
 
 -- No anon/authenticated policies by design. Only server code using the service-role key
 -- can read or write rows. Do not add a broad public select policy.

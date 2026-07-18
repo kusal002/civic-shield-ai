@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { allowRequest, rateLimitedResponse } from "@/lib/security/rate-limit";
 import { createEmergencyReport, getEmergencyReports } from "@/lib/supabase/emergency";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 
@@ -25,6 +26,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const rate = allowRequest(request, "emergency-create", 4);
+  if (!rate.allowed) return rateLimitedResponse(rate.retryAfterSeconds);
   if (!isSupabaseConfigured()) return NextResponse.json({ error: "Emergency reporting is not configured." }, { status: 503 });
 
   const body = await request.json() as {

@@ -655,6 +655,30 @@ Verified successfully:
 - `npm run lint`
 - `npm run build`
 
+### Accountability and safety hardening — 18 July 2026
+
+- **Moderator status control:** `/moderator` now has a server-protected login and can publish status updates only through a signed, HTTP-only moderator session. Every moderator update adds an immutable public timeline event.
+- **Community verification:** public report pages now allow one browser-scoped `Looks resolved` or `Still a problem` signal. It is stored for moderator review and cannot directly alter a public case status.
+- **Privacy boundary:** public report pages now show a safety summary rather than raw citizen prose or extra details. Public locations are reduced to a broader locality and coordinates are rounded before being returned to browser pages.
+- **Abuse controls:** report creation, emergency report creation, community verification, and moderator sign-in have server-side, IP-scoped request limits. This lightweight in-memory limit is appropriate for the hackathon demo; a shared rate-limit store is required before a multi-instance production launch.
+
+#### Required setup for moderator controls
+
+Add two server-only random secrets to `.env.local` and Vercel:
+
+```text
+MODERATOR_ACCESS_KEY=choose_a_long_private_access_key
+MODERATOR_SESSION_SECRET=use_a_different_long_random_secret
+```
+
+Run the latest `supabase/schema.sql` in the Supabase SQL Editor again. It adds the `community_verifications` table required for the public verification buttons.
+
+### Moderator review queue — 18 July 2026
+
+After sign-in at `/moderator`, the admin now sees every persisted civic report in newest-first order. Selecting a row reveals the complete private report context, including submitted description, extra details, evidence count, and delivery recipient. The moderator can publish a verified public status update or permanently delete a confirmed false/spam report. Deletion cascades to that report’s public timeline and community-verification records.
+
+The destructive delete action uses a CivicShield in-app confirmation modal rather than a browser alert, with explicit `Keep report` and `Delete permanently` choices.
+
 Required environment variables are documented in `.env.example`:
 
 ```text

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { CommunityVerification } from "@/components/dashboard/community-verification";
 import { getPublicReportDetail } from "@/lib/supabase/reports";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import type { ReportStatus, UrgencyLevel } from "@/types/report";
@@ -46,12 +47,11 @@ export default async function PublicReportDetailPage({ params }: { params: Promi
         <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_0.85fr]">
           <Card className="rounded-3xl">
             <CardContent className="p-6 sm:p-7">
-              <p className="eyebrow">Detailed report</p>
+              <p className="eyebrow">Public report summary</p>
               <dl className="mt-5 space-y-5">
-                <DetailItem label="Citizen description" value={report.description} />
+                <DetailItem label="Safety summary" value={report.description} />
                 <DetailItem label="Incident time" value={formatIncidentTime(report.duration)} />
                 <DetailItem label="Affected people" value={report.affectedPeople ? String(report.affectedPeople) : "Not specified"} />
-                <DetailItem label="Extra details" value={report.extraDetails || "No extra details added."} />
                 <DetailItem label="Suggested department" value={report.routeName || "Not routed yet"} />
               </dl>
             </CardContent>
@@ -93,6 +93,7 @@ export default async function PublicReportDetailPage({ params }: { params: Promi
             </CardContent>
           </Card>
         ) : null}
+        <CommunityVerification reportId={report.id} />
       </div>
     </main>
   );

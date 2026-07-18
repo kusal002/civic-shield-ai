@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 
+import { allowRequest, rateLimitedResponse } from "@/lib/security/rate-limit";
 import { createPersistentReport } from "@/lib/supabase/reports";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import type { CivicReportInput } from "@/types/report";
 
 export async function POST(request: Request) {
+  const rate = allowRequest(request, "report-create", 6);
+  if (!rate.allowed) return rateLimitedResponse(rate.retryAfterSeconds);
   if (!isSupabaseConfigured()) return NextResponse.json({ error: "Persistent reporting is not configured." }, { status: 503 });
   const body = (await request.json()) as { report?: CivicReportInput };
   const report = body.report;

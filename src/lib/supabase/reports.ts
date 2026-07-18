@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { publicCoordinate, publicLocationLabel } from "@/lib/privacy/public-report";
 import type { CivicReport, PublicCivicReport, PublicCivicReportDetail, PublicStatusEvent, ReportStatus, SafetyAnalysis } from "@/types/report";
 
 type DbReport = {
@@ -28,6 +29,8 @@ type DbStatusEvent = {
   note: string;
   created_at: string;
 };
+
+export type ModeratorReport = PublicCivicReportDetail & { emailRecipient: string | null; gmailMessageId: string | null };
 
 export async function createPersistentReport(input: Omit<CivicReport, "id" | "createdAt" | "updatedAt" | "status">) {
   const supabase = getSupabaseAdmin();
@@ -89,9 +92,9 @@ export async function getPublicReports(limit = 30): Promise<PublicCivicReport[]>
     category: report.category,
     urgency: report.urgency,
     status: report.status,
-    locationLabel: report.location_label,
-    latitude: report.latitude,
-    longitude: report.longitude,
+    locationLabel: publicLocationLabel(report.location_label),
+    latitude: publicCoordinate(report.latitude),
+    longitude: publicCoordinate(report.longitude),
     createdAt: report.created_at,
     updatedAt: report.updated_at,
   }));
@@ -132,16 +135,16 @@ export async function getPublicReportDetail(reportId: string): Promise<PublicCiv
   const report = data as DbReportDetail;
   return {
     id: report.report_id,
-    description: report.description,
+    description: report.analysis?.riskSummary ?? "A civic report is under review.",
     category: report.category,
     urgency: report.urgency,
     status: report.status,
-    locationLabel: report.location_label,
-    latitude: report.latitude,
-    longitude: report.longitude,
+    locationLabel: publicLocationLabel(report.location_label),
+    latitude: publicCoordinate(report.latitude),
+    longitude: publicCoordinate(report.longitude),
     duration: report.duration,
     affectedPeople: report.affected_people,
-    extraDetails: report.extra_details,
+    extraDetails: null,
     attachmentCount: report.attachment_count,
     routeName: report.route_name,
     analysis: report.analysis,
@@ -153,6 +156,40 @@ export async function getPublicReportDetail(reportId: string): Promise<PublicCiv
       createdAt: event.created_at,
     })),
   };
+}
+
+export async function addCommunityVerification(reportId: string, clientToken: string, verdict: "verified" | "disputed") {
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase.from("community_verifications").upsert({ report_id: reportId, client_token: clientToken, verdict }, { onConflict: "report_id,client_token" });
+  if (error) throw new Error(error.message);
+}
+
+export async function updateReportStatus(reportId: string, status: ReportStatus, note: string) {
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase.from("civic_reports").update({ status, updated_at: new Date().toISOString() }).eq("report_id", reportId);
+  if (error) throw new Error(error.message);
+  await addStatusEvent(reportId, status, note);
+}
+
+export async function getModeratorReports(limit = 100): Promise<ModeratorReport[]> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase.from("civic_reports")
+    .select("report_id, description, location_label, latitude, longitude, duration, affected_people, extra_details, attachment_count, category, urgency, route_name, analysis, status, email_recipient, gmail_message_id, created_at, updated_at")
+    .order("created_at", { ascending: false }).limit(limit);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as Array<DbReportDetail & { email_recipient: string | null; gmail_message_id: string | null }>).map((report) => ({
+    id: report.report_id, description: report.description, category: report.category, urgency: report.urgency, status: report.status,
+    locationLabel: report.location_label, latitude: report.latitude, longitude: report.longitude, duration: report.duration,
+    affectedPeople: report.affected_people, extraDetails: report.extra_details, attachmentCount: report.attachment_count,
+    routeName: report.route_name, analysis: report.analysis, createdAt: report.created_at, updatedAt: report.updated_at,
+    statusEvents: [], emailRecipient: report.email_recipient, gmailMessageId: report.gmail_message_id,
+  }));
+}
+
+export async function deleteModeratorReport(reportId: string) {
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase.from("civic_reports").delete().eq("report_id", reportId);
+  if (error) throw new Error(error.message);
 }
 
 async function addStatusEvent(reportId: string, status: ReportStatus, note: string) {

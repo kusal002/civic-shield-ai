@@ -399,41 +399,40 @@ The design should feel current because AI is embedded in a useful, accountable w
 
 ```text
 civic-shield-ai/
-├── app/
-│   ├── page.tsx                         # Home: two service choices
-│   ├── report/page.tsx                  # Non-emergency civic workflow
-│   ├── emergency/page.tsx               # Immediate help and safety guidance
-│   ├── analysis/[reportId]/page.tsx     # Structured report result
-│   ├── dashboard/page.tsx               # Community reports and filters
-│   ├── report/[reportId]/page.tsx       # Timeline, evidence, verification
-│   ├── moderator/page.tsx               # Demo review workspace
-│   └── api/
-│       ├── analyze/route.ts             # Secure AI request
-│       └── notifications/route.ts       # Future verified email dispatch
-├── components/
-│   ├── landing/                          # Hero, service cards, how-it-works
-│   ├── report/                           # Form and location details
-│   ├── emergency/                        # Emergency panel and safety steps
-│   ├── analysis/                         # Urgency, complaint, routing cards
-│   ├── dashboard/                        # Filters, stats, report cards
-│   ├── moderator/                        # Status and evidence controls
-│   ├── shared/                           # Navigation, badges, layout
-│   └── ui/                               # Reusable UI primitives
-├── lib/
-│   ├── ai/                               # Groq client, prompts, fallback rules
-│   ├── data/                             # Seed reports, guides, departments
-│   ├── storage/                          # localStorage report persistence
-│   ├── email/                            # Provider abstraction (later)
-│   └── utils.ts
-├── hooks/
-├── types/
+├── src/
+│   ├── app/
+│   │   ├── page.tsx                     # Home: two service choices
+│   │   ├── report/page.tsx              # Non-emergency civic workflow
+│   │   ├── analysis/[reportId]/page.tsx # Structured report result
+│   │   ├── dashboard/page.tsx           # Public accountability feed
+│   │   └── api/
+│   │       ├── analyze/route.ts         # Secure AI request
+│   │       ├── geocode/route.ts         # Nominatim search/reverse geocoding
+│   │       ├── reports/route.ts         # Persistent report creation
+│   │       ├── reports/[reportId]/analysis/route.ts
+│   │       ├── reports/[reportId]/delivery/route.ts
+│   │       ├── send-email/route.ts      # Gmail send endpoint
+│   │       └── auth/gmail/              # Google OAuth routes
+│   ├── components/
+│   │   ├── report/                       # Form, map, location and evidence capture
+│   │   ├── analysis/                     # Safety brief and email composer
+│   │   └── ui/                           # Reusable UI primitives
+│   ├── lib/
+│   │   ├── ai/                           # Groq prompt, email normalisation, fallback
+│   │   ├── data/                         # Department routes and verified directory
+│   │   ├── gmail/                        # Owner-Gmail access-token helpers
+│   │   ├── storage/                      # Browser-local evidence/report cache
+│   │   └── supabase/                     # Server-side persistence helpers
+│   └── types/                            # Shared report types
+├── supabase/
+│   └── schema.sql                        # Run once in Supabase SQL Editor
 ├── public/
-│   ├── images/
-│   ├── icons/
-│   └── manifest.json
 ├── .env.example
+├── package.json
 └── README.md
 ```
+
+> The following planned paths are not yet implemented: `/emergency`, a public report-detail page, and a moderator workspace.
 
 ---
 
@@ -446,11 +445,11 @@ We will complete one milestone at a time and pause after each one for review. Th
 | 1 | Product blueprint: UX, flows, architecture, folder structure | Complete in this README |
 | 2 | Project scaffold and design system only | Complete |
 | 3 | Home page with the two service choices | Complete |
-| 4 | Civic reporting form, map location, and local evidence storage | Complete |
+| 4 | Civic reporting form, map location, local evidence storage, and persistent report creation | Complete |
 | 5 | Emergency page with instant local safety detection | Pending |
 | 6 | Free-AI analysis with a reliable fallback | Complete |
 | 7 | Complaint, routing preview, and citizen-confirmed email workflow | Complete for the hackathon MVP |
-| 8 | Public dashboard, status timeline, and verification UI | Pending |
+| 8 | Public dashboard and persistent status tracking | Partially complete — dashboard + delivery status are live; moderator timeline and community verification are pending |
 | 9 | Mobile polish, demo data, testing, and deployment readiness | Pending |
 
 ### Step 2 delivery notes
@@ -516,7 +515,7 @@ The civic workflow now supports:
 - **Evidence capture:** select up to four images/videos or use the mobile camera capture option. Files are retained in local browser storage (IndexedDB) for the MVP.
 - **AI safety brief:** the analysis endpoint uses the Groq free API when `GROQ_API_KEY` is configured. If there is no key, no quota, or no network, the same flow continues with a transparent, deterministic local safety assessment.
 - **Department routing:** the app suggests an appropriate municipal department based on the reported issue. This is a suggestion, not a claim that a department has been contacted.
-- **Complaint and email drafting:** users can copy a formal complaint, regenerate a new email version, edit the subject/body, enter a verified official department address, and explicitly approve opening the email in their own mail application.
+- **Complaint and email drafting:** users can copy a formal complaint, regenerate a new email version, edit the subject/body, receive a source-tracked editable department address where available, and explicitly approve direct sending from the CivicShield Gmail account.
 
 ### Free service configuration
 
@@ -547,7 +546,7 @@ https://YOUR-VERCEL-PROJECT.vercel.app/api/auth/gmail/callback
 
 The report page now prevents nested forms, so location search works without hydration errors. Reverse geocoding displays both the readable address/locality and exact latitude/longitude after map pinning or current-location selection.
 
-The address input also provides a short, debounced suggestion list while the user types. Live evidence capture uses the device camera directly: users can choose `Take photo` or `Record video`, rather than only opening the general file picker.
+The address input provides a short, debounced suggestion list while the user types. The list overlays the map without moving the form layout. Live evidence capture uses the device camera directly: users can choose `Take photo` or `Record video`, rather than only opening the general file picker.
 
 Each generated department email carries the full useful report record: report reference, issue description, confirmed location name, latitude/longitude, duration, optional positive affected-person count, optional extra details, and evidence-file count. The reporter can still edit the final draft before approval.
 
@@ -569,9 +568,32 @@ India-wide coverage must be added city-by-city from official municipal or state 
 
 ### Email boundary
 
-The citizen must still review the recipient and message and check the authorization box before CivicShield sends a message. With `GMAIL_REFRESH_TOKEN`, the project owner Gmail is used; without it, a citizen may connect Gmail for the short access-token lifetime. The normal fallback remains a citizen-approved `mailto:` draft.
+The citizen must still review the recipient and message and check the authorization box before CivicShield sends a message. With `GMAIL_REFRESH_TOKEN`, the project owner Gmail is used; without it, a citizen may connect Gmail for the short access-token lifetime. CivicShield does not claim that a successful send means the authority has acted.
 
-**Current stopping point:** The civic form, map, local evidence, AI brief, and editable email draft are implemented. The dedicated immediate-emergency route and the public/moderator dashboard remain the next planned milestones.
+### Current implementation status — 18 July 2026
+
+#### Completed
+
+- Polished landing page with civic-report and emergency-service entry points.
+- Civic report form with validation, map pinning, current location, address suggestions, readable address + coordinates, image/video selection, and live camera capture.
+- Groq free-tier analysis with an offline deterministic fallback.
+- Structured safety brief, urgency warning, formal complaint, and consistently formatted, editable department email.
+- Source-tracked editable government-recipient directory for the current West Bengal pilot locations.
+- Gmail owner-account sending after explicit citizen confirmation, evidence attachments, local delivery receipt, and no false "resolved" claim.
+- Supabase server-side report creation, analysis persistence, delivery-confirmed persistence, and public `/dashboard` feed.
+- Responsive visual fixes for map autocomplete stacking and email-send controls.
+
+#### Setup still required before persistent tracking works
+
+- Run `supabase/schema.sql` once in the correct Supabase project’s SQL Editor.
+- Add the same Supabase, Groq, and Gmail environment variables to Vercel before deploying.
+
+#### Pending next steps
+
+1. **Step 5 — Emergency route:** build the dedicated `/emergency` page with immediate 112 action and local safety guidance.
+2. **Finish Step 8 — Accountability workflow:** report-detail page, public status timeline, moderator-only status updates, and community verification/dispute/reopen controls.
+3. **Directory expansion:** add verified municipal contacts city-by-city; never guess nationwide recipients.
+4. **Step 9 — Launch quality:** mobile QA, seeded demo reports, rate limiting/moderator access, privacy review, Vercel configuration, and final hackathon demo script.
 
 ### Next milestone: persistent public tracking
 

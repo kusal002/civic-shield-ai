@@ -37,20 +37,6 @@ export function LocationPicker({
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
 
   useEffect(() => {
-    if (value || !navigator.geolocation) return;
-    setSearching(true);
-    setNotice("Requesting your current location…");
-    navigator.geolocation.getCurrentPosition(
-      (position) => void resolveCoordinates(position.coords.latitude, position.coords.longitude, "current-location"),
-      () => {
-        setNotice("Location permission was unavailable. Search or tap the map to choose a place.");
-        setSearching(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
-  }, []);
-
-  useEffect(() => {
     if (query.trim().length < 3) {
       return;
     }

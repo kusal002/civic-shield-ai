@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, BellRing, CheckCircle2, Clock3, MapPin, ShieldCheck, Sparkles, Venus } from "lucide-react";
+import { AlertTriangle, BellRing, Clock3, MapPin, ShieldCheck, Sparkles, Venus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
@@ -21,10 +21,7 @@ export function LocationSafetySnapshot({ compact = false }: { compact?: boolean 
   const [status, setStatus] = useState<"requesting" | "loading" | "ready" | "blocked">("requesting");
 
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setStatus("blocked");
-      return;
-    }
+    if (!navigator.geolocation) return;
 
     navigator.geolocation.getCurrentPosition(
       (position) => {

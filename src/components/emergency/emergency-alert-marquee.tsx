@@ -22,18 +22,26 @@ export function EmergencyAlertMarquee() {
         .catch(() => setReports([]));
     }
 
-    if (!navigator.geolocation) {
-      loadReports();
-      return () => controller.abort();
+    function loadWithCurrentLocation() {
+      if (!navigator.geolocation) {
+        loadReports();
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => loadReports({ latitude: position.coords.latitude, longitude: position.coords.longitude }),
+        () => loadReports(),
+        { enableHighAccuracy: true, maximumAge: 120000, timeout: 7000 },
+      );
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => loadReports({ latitude: position.coords.latitude, longitude: position.coords.longitude }),
-      () => loadReports(),
-      { enableHighAccuracy: true, maximumAge: 120000, timeout: 7000 },
-    );
+    loadWithCurrentLocation();
+    window.addEventListener("civicshield:emergency-created", loadWithCurrentLocation);
 
-    return () => controller.abort();
+    return () => {
+      window.removeEventListener("civicshield:emergency-created", loadWithCurrentLocation);
+      controller.abort();
+    };
   }, []);
 
   if (!reports.length) return null;
@@ -42,13 +50,14 @@ export function EmergencyAlertMarquee() {
     <div className="border-b border-[#f0cfc8] bg-[#fff4f1] text-[#7c2922]">
       <div className="mx-auto flex max-w-7xl items-center gap-3 overflow-hidden px-4 py-2 text-xs font-bold sm:text-sm">
         <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-danger">
-          <AlertTriangle aria-hidden="true" size={14} /> Nearby alerts
+          <AlertTriangle aria-hidden="true" size={14} /> Priority alerts
         </span>
         <div className="min-w-0 flex-1 overflow-hidden">
           <div className="emergency-marquee inline-flex gap-8 whitespace-nowrap">
             {[...reports, ...reports].map((report, index) => (
-              <Link className="inline-flex items-center gap-1.5 hover:underline" href={`/emergency?type=${report.type === "Women safety" ? "women" : "unsafe"}`} key={`${report.id}-${index}`}>
+              <Link className="inline-flex items-center gap-1.5 hover:underline" href={`/emergency?type=${getEmergencyTypeParam(report.type)}`} key={`${report.id}-${index}`}>
                 <MapPin aria-hidden="true" size={13} />
+                <span className={getPriorityClass(report.priority)}>{(report.priority ?? "medium").toUpperCase()}</span>
                 {report.type} lodged near {report.locationLabel} · {formatRelative(report.createdAt)}
               </Link>
             ))}
@@ -57,6 +66,23 @@ export function EmergencyAlertMarquee() {
       </div>
     </div>
   );
+}
+
+function getEmergencyTypeParam(type: string) {
+  const normalized = type.toLowerCase();
+  if (normalized.includes("women")) return "women";
+  if (normalized.includes("fire")) return "fire";
+  if (normalized.includes("medical")) return "medical";
+  if (normalized.includes("wire") || normalized.includes("electric")) return "electrical";
+  if (normalized.includes("accident")) return "accident";
+  return "unsafe";
+}
+
+function getPriorityClass(priority?: EmergencyReport["priority"]) {
+  if (priority === "critical") return "rounded-full bg-danger px-2 py-0.5 text-white";
+  if (priority === "high") return "rounded-full bg-[#fff0ed] px-2 py-0.5 text-danger";
+  if (priority === "medium") return "rounded-full bg-[#fff6df] px-2 py-0.5 text-[#8a550e]";
+  return "rounded-full bg-white px-2 py-0.5 text-muted";
 }
 
 function formatRelative(value: string) {

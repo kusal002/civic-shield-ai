@@ -57,7 +57,7 @@ export async function getEmergencyReports(options: { latitude?: number; longitud
     distanceMeters: options.latitude && options.longitude && report.latitude && report.longitude
       ? getDistanceMeters(options.latitude, options.longitude, report.latitude, report.longitude)
       : undefined,
-  }));
+  })).filter((report) => isWithinLast24Hours(report.createdAt));
 
   if (typeof options.latitude === "number" && typeof options.longitude === "number") {
     const radiusMeters = (options.radiusKm ?? 5) * 1000;
@@ -70,6 +70,26 @@ export async function getEmergencyReports(options: { latitude?: number; longitud
   return reports.slice(0, options.limit ?? 12);
 }
 
+export async function getModeratorEmergencyReports(limit = 100) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase.from("emergency_reports")
+    .select("emergency_id, emergency_type, location_label, latitude, longitude, details, is_safe, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+
+  return ((data ?? []) as DbEmergencyReport[]).map((report): EmergencyReport => ({
+    id: report.emergency_id,
+    type: report.emergency_type,
+    locationLabel: report.location_label,
+    latitude: report.latitude,
+    longitude: report.longitude,
+    details: report.details,
+    isSafe: report.is_safe,
+    createdAt: report.created_at,
+  }));
+}
+
 function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
   const earthRadiusMeters = 6371000;
   const deltaLat = toRadians(lat2 - lat1);
@@ -80,4 +100,8 @@ function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: numbe
 
 function toRadians(value: number) {
   return value * Math.PI / 180;
+}
+
+function isWithinLast24Hours(value: string) {
+  return new Date(value).getTime() >= Date.now() - 24 * 60 * 60 * 1000;
 }

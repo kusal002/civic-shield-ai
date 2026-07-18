@@ -242,7 +242,17 @@ export function EmergencyAssistance() {
         }),
       });
       const result = await response.json() as { emergencyId?: string };
-      if (response.ok && result.emergencyId) setSavedReference(result.emergencyId);
+      if (response.ok && result.emergencyId) {
+        setSavedReference(result.emergencyId);
+        window.dispatchEvent(new CustomEvent("civicshield:emergency-created", {
+          detail: {
+            emergencyId: result.emergencyId,
+            type: activeEmergency.label,
+            latitude: coordinates?.latitude,
+            longitude: coordinates?.longitude,
+          },
+        }));
+      }
     } catch {
       // Local emergency note is still saved when server persistence is unavailable.
     }
@@ -259,70 +269,76 @@ export function EmergencyAssistance() {
           <ArrowLeft aria-hidden="true" size={16} /> Back to home
         </Link>
 
-        <section className="grid gap-7 pb-12 pt-6 lg:grid-cols-[0.72fr_1.28fr] lg:items-start lg:pb-16 lg:pt-10">
-          <div className="rounded-[1.75rem] border border-[#efc7bf] bg-white p-5 shadow-surface sm:p-7">
-            <Badge tone="urgent" className="gap-1.5">
-              <Siren aria-hidden="true" size={13} /> Emergency assistance
-            </Badge>
-            <h1 className="mt-5 font-display text-4xl font-bold leading-tight tracking-[-0.035em] text-[#251918] sm:text-5xl">
-              Get help fast. Then record the incident.
-            </h1>
-            <p className="mt-4 max-w-xl text-base leading-7 text-muted sm:text-lg">
-              Share your live location once, choose the emergency type, and see nearby help without filling a long form.
-            </p>
+        <section className="pb-12 pt-6 lg:pb-16 lg:pt-10">
+          <div className="rounded-[2rem] border border-[#efc7bf] bg-white p-5 shadow-surface sm:p-7">
+            <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
+              <div>
+                <Badge tone="urgent" className="gap-1.5">
+                  <Siren aria-hidden="true" size={13} /> Quick response
+                </Badge>
+                <h1 className="mt-5 font-display text-4xl font-bold leading-tight tracking-[-0.035em] text-[#251918] sm:text-5xl">
+                  Get help first.
+                </h1>
+                <p className="mt-4 max-w-xl text-base leading-7 text-muted sm:text-lg">
+                  Choose the emergency type, call 112 if there is immediate danger, and use the nearest relevant help shown beside you.
+                </p>
 
-            <a
-              className="mt-7 flex min-h-20 items-center justify-center gap-3 rounded-2xl bg-danger px-6 py-5 text-center text-xl font-bold text-white shadow-[0_18px_40px_rgb(190_59_49_/_24%)] transition hover:bg-[#a53129] focus-visible:outline-none sm:text-2xl"
-              href="tel:112"
-            >
-              <PhoneCall aria-hidden="true" size={27} /> Call 112 Now
-            </a>
+                <a
+                  className="mt-6 flex min-h-20 items-center justify-center gap-3 rounded-2xl bg-danger px-6 py-5 text-center text-xl font-bold text-white shadow-[0_18px_40px_rgb(190_59_49_/_24%)] transition hover:bg-[#a53129] focus-visible:outline-none sm:text-2xl"
+                  href="tel:112"
+                >
+                  <PhoneCall aria-hidden="true" size={27} /> Call 112 Now
+                </a>
 
-            <LocationPanel coordinates={coordinates} locationLabel={locationLabel} locationStatus={locationStatus} />
+                <LocationPanel coordinates={coordinates} locationLabel={locationLabel} locationStatus={locationStatus} />
+              </div>
 
-            <div className="mt-5 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-              <QuickFact label="First" value="Move safe" />
-              <QuickFact label="Then" value="Call 112" />
-              <QuickFact label="Finally" value="Share location" />
-            </div>
-          </div>
+              <div className="space-y-4">
+                <div className="rounded-[1.5rem] border border-[#f0d0c9] bg-[#fff8f6] p-4 sm:p-5">
+                  <div className="flex items-start gap-3">
+                    <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[#ffe4df] text-danger">
+                      <ActiveIcon aria-hidden={true} size={22} />
+                    </span>
+                    <div>
+                      <p className="eyebrow text-danger">What is happening?</p>
+                      <h2 className="mt-1 font-display text-xl font-bold">Select one emergency type</h2>
+                    </div>
+                  </div>
 
-          <div className="space-y-5">
-            <Card className="rounded-[1.5rem] border-[#efc7bf] bg-white">
-              <CardContent className="p-5 sm:p-6">
-                <div className="flex items-start gap-3">
-                  <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[#ffe4df] text-danger">
-                    <ActiveIcon aria-hidden={true} size={22} />
-                  </span>
-                  <div>
-                    <p className="eyebrow text-danger">What is happening?</p>
-                    <h2 className="mt-1 font-display text-xl font-bold">Choose one quick category</h2>
+                  <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-6">
+                    {emergencyTypes.map((type) => {
+                      const TypeIcon = type.icon;
+                      const active = type.id === selectedType;
+                      return (
+                        <button
+                          className={`flex h-20 flex-col items-center justify-center gap-1.5 rounded-2xl border px-2 text-center text-xs font-bold transition sm:h-24 sm:text-sm ${
+                            active ? "border-danger bg-white text-danger shadow-sm" : "border-[#f0d0c9] bg-white/70 text-[#4d5d59] hover:bg-white"
+                          }`}
+                          key={type.id}
+                          onClick={() => setSelectedType(type.id)}
+                          type="button"
+                        >
+                          <TypeIcon aria-hidden={true} size={21} />
+                          <span>{type.label}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-6">
-                  {emergencyTypes.map((type) => {
-                    const TypeIcon = type.icon;
-                    const active = type.id === selectedType;
-                    return (
-                      <button
-                        className={`flex h-24 flex-col items-center justify-center gap-2 rounded-2xl border px-2 text-center text-sm font-bold transition ${
-                          active ? "border-danger bg-[#fff0ed] text-danger" : "border-line bg-white text-[#4d5d59] hover:bg-[#fff8f6]"
-                        }`}
-                        key={type.id}
-                        onClick={() => setSelectedType(type.id)}
-                        type="button"
-                      >
-                        <TypeIcon aria-hidden={true} size={22} />
-                        <span>{type.label}</span>
-                      </button>
-                    );
-                  })}
+                <div className="grid grid-cols-3 gap-3 text-sm">
+                  <QuickFact label="1" value="Move safe" />
+                  <QuickFact label="2" value="Call 112" />
+                  <QuickFact label="3" value="Use nearby help" />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
+          </div>
 
-            <div className="grid gap-5 2xl:grid-cols-[0.9fr_1.1fr]">
+          <div className="mt-6 grid gap-6 xl:grid-cols-[1.15fr_0.85fr] xl:items-start">
+            <NearbyHelpPanel activeEmergency={activeEmergency} coordinates={coordinates} nearbyPlaces={nearbyPlaces} nearbyStatus={nearbyStatus} />
+
+            <div className="space-y-6">
               <Card className="rounded-[1.5rem] border-[#efc7bf] bg-white">
                 <CardContent className="p-5 sm:p-6">
                   <p className="eyebrow text-danger">Safety checklist</p>
@@ -338,14 +354,11 @@ export function EmergencyAssistance() {
                 </CardContent>
               </Card>
 
-              <NearbyHelpPanel activeEmergency={activeEmergency} coordinates={coordinates} nearbyPlaces={nearbyPlaces} nearbyStatus={nearbyStatus} />
-            </div>
-
-            <Card className="rounded-[1.5rem] border-[#efc7bf] bg-white">
+              <Card className="rounded-[1.5rem] border-[#efc7bf] bg-white">
               <CardContent className="p-5 sm:p-6">
                 <p className="eyebrow text-danger">Emergency note</p>
                 <h2 className="mt-2 font-display text-xl font-bold">Raise a quick incident record</h2>
-                <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
+                <div className="mt-5 grid gap-4">
                   <label className="block">
                     <span className="text-sm font-bold text-[#344540]">Location or landmark</span>
                     <span className="mt-2 flex items-center gap-2 rounded-2xl border border-line bg-[#fbfdfc] px-3">
@@ -367,8 +380,8 @@ export function EmergencyAssistance() {
                       value={details}
                     />
                   </label>
-                  <Button className="h-12 w-full lg:w-auto" onClick={() => void saveEmergencyNote()} variant="danger">
-                    <ShieldAlert aria-hidden="true" size={18} /> Save
+                  <Button className="h-12 w-full" onClick={() => void saveEmergencyNote()} variant="danger">
+                    <ShieldAlert aria-hidden="true" size={18} /> Lodge alert
                   </Button>
                 </div>
                 <label className="mt-4 flex items-start gap-3 rounded-2xl border border-[#f0d0c9] bg-[#fff8f6] p-3 text-sm font-semibold text-[#4c3834]">
@@ -382,7 +395,8 @@ export function EmergencyAssistance() {
                   </div>
                 ) : null}
               </CardContent>
-            </Card>
+              </Card>
+            </div>
           </div>
         </section>
       </div>
@@ -436,12 +450,17 @@ function NearbyHelpPanel({
   nearbyStatus: "idle" | "loading" | "ready" | "error";
 }) {
   return (
-    <Card className="rounded-[1.5rem] border-[#efc7bf] bg-white">
+    <Card className="rounded-[1.75rem] border-[#efc7bf] bg-white shadow-surface">
       <CardContent className="p-5 sm:p-6">
-        <p className="eyebrow text-danger">Nearby help</p>
-        <h2 className="mt-2 font-display text-xl font-bold">
-          {activeEmergency.id === "women" ? "Police and safer public places" : "Relevant departments near you"}
-        </h2>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="eyebrow text-danger">Relevant places near you</p>
+            <h2 className="mt-2 font-display text-2xl font-bold">
+              {activeEmergency.id === "women" ? "Police and safer public places" : "Nearest help for this emergency"}
+            </h2>
+          </div>
+          <Badge tone="urgent">{activeEmergency.nearbyKinds.length} live lookup{activeEmergency.nearbyKinds.length === 1 ? "" : "s"}</Badge>
+        </div>
         {!coordinates ? (
           <p className="mt-4 rounded-2xl border border-[#f0d0c9] bg-[#fff8f6] p-4 text-sm leading-6 text-muted">
             Allow location access to load nearby stations, hospitals, fire services, ambulance services, and safer public places.

@@ -446,10 +446,10 @@ We will complete one milestone at a time and pause after each one for review. Th
 | 1 | Product blueprint: UX, flows, architecture, folder structure | Complete in this README |
 | 2 | Project scaffold and design system only | Complete |
 | 3 | Home page with the two service choices | Complete |
-| 4 | Civic reporting form and local report storage | Complete |
+| 4 | Civic reporting form, map location, and local evidence storage | Complete |
 | 5 | Emergency page with instant local safety detection | Pending |
-| 6 | Free-AI analysis with a reliable fallback | Pending |
-| 7 | Complaint, routing preview, and email-ready workflow | Pending |
+| 6 | Free-AI analysis with a reliable fallback | Complete |
+| 7 | Complaint, routing preview, and citizen-confirmed email workflow | Complete for the hackathon MVP |
 | 8 | Public dashboard, status timeline, and verification UI | Pending |
 | 9 | Mobile polish, demo data, testing, and deployment readiness | Pending |
 
@@ -508,7 +508,50 @@ The Step 4 implementation has passed the following checks:
 - `npm.cmd run lint`
 - `npm.cmd run build`
 
-**Current stopping point:** Step 4. Emergency workflow, AI, email routing, complaint generation, and dashboard behavior have not been built yet.
+### Step 4, 6, and 7 delivery notes
+
+The civic workflow now supports:
+
+- **Precise location selection:** search an address/landmark, use current device location, or place a pin on the interactive OpenStreetMap map. The user sees the selected location and must confirm it before submission.
+- **Evidence capture:** select up to four images/videos or use the mobile camera capture option. Files are retained in local browser storage (IndexedDB) for the MVP.
+- **AI safety brief:** the analysis endpoint uses the Groq free API when `GROQ_API_KEY` is configured. If there is no key, no quota, or no network, the same flow continues with a transparent, deterministic local safety assessment.
+- **Department routing:** the app suggests an appropriate municipal department based on the reported issue. This is a suggestion, not a claim that a department has been contacted.
+- **Complaint and email drafting:** users can copy a formal complaint, regenerate a new email version, edit the subject/body, enter a verified official department address, and explicitly approve opening the email in their own mail application.
+
+### Free service configuration
+
+Copy `.env.example` to `.env.local` and add a free Groq key to enable live AI:
+
+```text
+GROQ_API_KEY=your_free_groq_key
+GROQ_MODEL=llama-3.1-8b-instant
+```
+
+The map uses OpenStreetMap tiles and Nominatim geocoding; no paid map key is required. Location search is designed for low-volume hackathon use and includes a manual pin fallback.
+
+### Gmail sending configuration
+
+For direct, citizen-confirmed sending from a Gmail account, configure Google OAuth in `.env.local`:
+
+```text
+GOOGLE_CLIENT_ID=your_google_oauth_client_id
+GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
+GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/gmail/callback
+```
+
+In Google Cloud Console, the redirect URI must match exactly. For Vercel, add the production callback URL there and set the same production URL in Vercel environment variables:
+
+```text
+https://YOUR-VERCEL-PROJECT.vercel.app/api/auth/gmail/callback
+```
+
+The report page now prevents nested forms, so location search works without hydration errors. Reverse geocoding displays both the readable address/locality and exact latitude/longitude after map pinning or current-location selection.
+
+### Email boundary
+
+The citizen must still review the recipient and message, check the authorization box, and connect their Gmail before CivicShield sends a message. The Gmail access token is kept in a secure, HTTP-only browser cookie for its short access-token lifetime. The normal fallback remains a citizen-approved `mailto:` draft. Attachments are kept on the device and must be added manually; direct Gmail attachment delivery belongs to the cloud-storage milestone.
+
+**Current stopping point:** The civic form, map, local evidence, AI brief, and editable email draft are implemented. The dedicated immediate-emergency route and the public/moderator dashboard remain the next planned milestones.
 
 ## MVP Boundary
 

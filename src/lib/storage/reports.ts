@@ -80,10 +80,11 @@ export function saveLocalReport(input: CivicReportInput) {
     id: createReportId(existingReports),
     description: input.description.trim(),
     location: input.location.trim(),
+    incidentLocation: input.incidentLocation,
     duration: input.duration.trim(),
     affectedPeople: input.affectedPeople?.trim() || undefined,
     extraDetails: input.extraDetails?.trim() || undefined,
-    photoName: input.photoName?.trim() || undefined,
+    attachments: input.attachments,
     status: "ready-to-analyze",
     createdAt: now,
     updatedAt: now,
@@ -91,4 +92,19 @@ export function saveLocalReport(input: CivicReportInput) {
 
   writeStoredReports([report, ...existingReports]);
   return report;
+}
+
+export function saveReportAnalysis(reportId: string, analysis: CivicReport["analysis"]) {
+  const reports = readStoredReports();
+  const updatedReports = reports.map((report) =>
+    report.id === reportId
+      ? { ...report, analysis, updatedAt: new Date().toISOString() }
+      : report,
+  );
+  writeStoredReports(updatedReports);
+  return updatedReports.find((report) => report.id === reportId) ?? null;
+}
+
+export function getLocalReport(reportId: string) {
+  return readStoredReports().find((report) => report.id === reportId) ?? null;
 }

@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import type { CivicReport, PublicCivicReport, ReportStatus, SafetyAnalysis } from "@/types/report";
+import type { CivicReport, PublicCivicReport, PublicCivicReportDetail, PublicStatusEvent, ReportStatus, SafetyAnalysis } from "@/types/report";
 
 type DbReport = {
   report_id: string;
@@ -7,8 +7,26 @@ type DbReport = {
   urgency: PublicCivicReport["urgency"];
   status: ReportStatus;
   location_label: string;
+  latitude: number | null;
+  longitude: number | null;
   created_at: string;
   updated_at: string;
+};
+
+type DbReportDetail = DbReport & {
+  description: string;
+  duration: string;
+  affected_people: number | null;
+  extra_details: string | null;
+  attachment_count: number;
+  route_name: string | null;
+  analysis: SafetyAnalysis | null;
+};
+
+type DbStatusEvent = {
+  status: ReportStatus;
+  note: string;
+  created_at: string;
 };
 
 export async function createPersistentReport(input: Omit<CivicReport, "id" | "createdAt" | "updatedAt" | "status">) {
@@ -61,7 +79,7 @@ export async function markPersistentDelivery(reportId: string, recipient: string
 export async function getPublicReports(limit = 30): Promise<PublicCivicReport[]> {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase.from("civic_reports")
-    .select("report_id, category, urgency, status, location_label, created_at, updated_at")
+    .select("report_id, category, urgency, status, location_label, latitude, longitude, created_at, updated_at")
     .eq("public_visible", true)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -72,13 +90,85 @@ export async function getPublicReports(limit = 30): Promise<PublicCivicReport[]>
     urgency: report.urgency,
     status: report.status,
     locationLabel: report.location_label,
+    latitude: report.latitude,
+    longitude: report.longitude,
     createdAt: report.created_at,
     updatedAt: report.updated_at,
   }));
+}
+
+export async function getNearbyPublicReports(latitude: number, longitude: number, radiusKm = 10, limit = 50): Promise<PublicCivicReport[]> {
+  const reports = await getPublicReports(100);
+  return reports
+    .map((report) => ({
+      ...report,
+      distanceMeters: report.latitude && report.longitude ? getDistanceMeters(latitude, longitude, report.latitude, report.longitude) : undefined,
+    }))
+    .filter((report) => typeof report.distanceMeters === "number" && report.distanceMeters <= radiusKm * 1000)
+    .sort((first, second) => {
+      if (typeof first.distanceMeters === "number" && typeof second.distanceMeters === "number") return first.distanceMeters - second.distanceMeters;
+      return new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime();
+    })
+    .slice(0, limit);
+}
+
+export async function getPublicReportDetail(reportId: string): Promise<PublicCivicReportDetail | null> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase.from("civic_reports")
+    .select("report_id, description, location_label, latitude, longitude, duration, affected_people, extra_details, attachment_count, category, urgency, route_name, analysis, status, created_at, updated_at")
+    .eq("public_visible", true)
+    .eq("report_id", reportId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+
+  const { data: events, error: eventsError } = await supabase.from("report_status_events")
+    .select("status, note, created_at")
+    .eq("report_id", reportId)
+    .eq("public_visible", true)
+    .order("created_at", { ascending: true });
+  if (eventsError) throw new Error(eventsError.message);
+
+  const report = data as DbReportDetail;
+  return {
+    id: report.report_id,
+    description: report.description,
+    category: report.category,
+    urgency: report.urgency,
+    status: report.status,
+    locationLabel: report.location_label,
+    latitude: report.latitude,
+    longitude: report.longitude,
+    duration: report.duration,
+    affectedPeople: report.affected_people,
+    extraDetails: report.extra_details,
+    attachmentCount: report.attachment_count,
+    routeName: report.route_name,
+    analysis: report.analysis,
+    createdAt: report.created_at,
+    updatedAt: report.updated_at,
+    statusEvents: ((events ?? []) as DbStatusEvent[]).map((event): PublicStatusEvent => ({
+      status: event.status,
+      note: event.note,
+      createdAt: event.created_at,
+    })),
+  };
 }
 
 async function addStatusEvent(reportId: string, status: ReportStatus, note: string) {
   const supabase = getSupabaseAdmin();
   const { error } = await supabase.from("report_status_events").insert({ report_id: reportId, status, note, public_visible: true });
   if (error) throw new Error(error.message);
+}
+
+function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const earthRadiusMeters = 6371000;
+  const deltaLat = toRadians(lat2 - lat1);
+  const deltaLon = toRadians(lon2 - lon1);
+  const a = Math.sin(deltaLat / 2) ** 2 + Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(deltaLon / 2) ** 2;
+  return Math.round(earthRadiusMeters * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+}
+
+function toRadians(value: number) {
+  return value * Math.PI / 180;
 }

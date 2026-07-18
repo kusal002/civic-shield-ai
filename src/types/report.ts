@@ -90,6 +90,38 @@ export interface PublicCivicReport {
   urgency: UrgencyLevel | null;
   status: ReportStatus;
   locationLabel: string;
+  latitude: number | null;
+  longitude: number | null;
+  distanceMeters?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface PublicStatusEvent {
+  status: ReportStatus;
+  note: string;
+  createdAt: string;
+}
+
+export interface PublicCivicReportDetail extends PublicCivicReport {
+  description: string;
+  duration: string;
+  affectedPeople: number | null;
+  extraDetails: string | null;
+  attachmentCount: number;
+  routeName: string | null;
+  analysis: SafetyAnalysis | null;
+  statusEvents: PublicStatusEvent[];
+}
+
+export interface EmergencyReport {
+  id: string;
+  type: string;
+  locationLabel: string;
+  latitude: number | null;
+  longitude: number | null;
+  details: string | null;
+  isSafe: boolean;
+  createdAt: string;
+  distanceMeters?: number;
 }

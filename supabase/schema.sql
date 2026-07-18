@@ -35,11 +35,26 @@ create table if not exists public.report_status_events (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.emergency_reports (
+  id bigint generated always as identity primary key,
+  emergency_id text unique not null,
+  emergency_type text not null,
+  location_label text not null,
+  latitude double precision,
+  longitude double precision,
+  details text,
+  is_safe boolean not null default false,
+  public_visible boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
 create index if not exists civic_reports_public_created_idx on public.civic_reports (public_visible, created_at desc);
 create index if not exists report_status_events_report_idx on public.report_status_events (report_id, created_at desc);
+create index if not exists emergency_reports_public_created_idx on public.emergency_reports (public_visible, created_at desc);
 
 alter table public.civic_reports enable row level security;
 alter table public.report_status_events enable row level security;
+alter table public.emergency_reports enable row level security;
 
 -- No anon/authenticated policies by design. Only server code using the service-role key
 -- can read or write rows. Do not add a broad public select policy.

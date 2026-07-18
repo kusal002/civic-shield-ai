@@ -21,7 +21,7 @@ import type { CivicAttachment, IncidentLocation } from "@/types/report";
 const reportSchema = z.object({
   description: z.string().trim().min(20, "Describe the problem in at least 20 characters.").max(900, "Keep the description under 900 characters for now."),
   location: z.string().trim().min(6, "Confirm a useful location or landmark.").max(180),
-  duration: z.string().trim().min(2, "Add when this started or how long it has continued.").max(120),
+  duration: z.string().trim().min(1, "Select when this issue was noticed.").max(120),
   affectedPeople: z.string().trim().refine((value) => !value || /^[1-9]\d*$/.test(value), "Enter a whole number greater than zero, or leave this blank.").optional(),
   extraDetails: z.string().trim().max(360).optional(),
 });
@@ -131,8 +131,8 @@ export function CivicReportForm() {
             <LocationPicker error={errors.location?.message} value={selectedLocation} onChange={updateLocation} />
 
             <div className="grid gap-5 md:grid-cols-2">
-              <FormField error={errors.duration?.message} icon={<Clock3 aria-hidden="true" size={16} />} label="Time or duration">
-                <input className="h-12 w-full rounded-2xl border border-line bg-white px-4 text-sm text-ink shadow-sm transition focus:border-brand focus:outline-none" placeholder="Since morning, 3 days, after heavy rain..." {...register("duration")} />
+              <FormField error={errors.duration?.message} helper="Use the calendar picker to select when the issue was noticed." icon={<Clock3 aria-hidden="true" size={16} />} label="Date and time noticed">
+                <input className="h-12 w-full rounded-2xl border border-line bg-white px-4 text-sm text-ink shadow-sm transition focus:border-brand focus:outline-none" type="datetime-local" {...register("duration")} />
               </FormField>
               <FormField error={errors.affectedPeople?.message} helper="Optional. We include this in the department email only when a number is provided." label="Number of people affected">
                 <input className="h-12 w-full rounded-2xl border border-line bg-white px-4 text-sm text-ink shadow-sm transition focus:border-brand focus:outline-none" inputMode="numeric" min="1" placeholder="Example: 25" type="number" {...register("affectedPeople")} />

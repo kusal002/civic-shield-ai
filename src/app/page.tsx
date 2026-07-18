@@ -2,20 +2,20 @@ import Link from "next/link";
 import {
   ArrowRight,
   CheckCircle2,
-  ChevronRight,
-  ClipboardCheck,
-  FileText,
   MapPin,
   PhoneCall,
+  Radar,
+  Route,
   ShieldAlert,
   ShieldCheck,
   Siren,
   Sparkles,
+  Venus,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { LocationSafetySnapshot } from "@/components/landing/location-safety-snapshot";
 
 const civicSteps = [
   {
@@ -78,12 +78,18 @@ export default function Home() {
             AI-assisted civic action
           </Badge>
           <h1 className="mt-6 font-display text-5xl font-bold leading-[1.03] tracking-[-0.045em] text-ink sm:text-6xl lg:text-7xl">
-            Make public problems
-            <span className="block text-brand">actionable.</span>
+            Feel safer when you
+            <span className="block text-brand">enter a new place.</span>
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-8 text-muted sm:text-xl">
-            CivicShield turns an unclear local problem into a clear report, safer next steps, and an accountable path to resolution.
+            CivicShield checks nearby civic complaints and emergency signals, then helps citizens, women, and minors act quickly with location-aware safety support.
           </p>
+          <div className="mt-5 rounded-2xl border border-[#cfe6dd] bg-[#f8fdfb] p-4 text-sm leading-6 text-[#31544b]">
+            <p className="font-bold">At home or somewhere new, you can always reach CivicShield.</p>
+            <p className="mt-1">
+              We help you understand nearby risks, find the right emergency support, and raise a clear complaint without wasting time.
+            </p>
+          </div>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Button asChild size="lg">
@@ -97,6 +103,12 @@ export default function Home() {
               </Link>
             </Button>
           </div>
+          <Link
+            className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#f0c6d8] bg-[#fff7fb] px-4 py-2 text-sm font-bold text-[#9b2755] transition hover:bg-[#ffeaf3]"
+            href="/emergency?type=women"
+          >
+            <Venus aria-hidden="true" size={16} /> Women safety and complaint support
+          </Link>
           <p className="mt-4 flex items-center gap-2 text-sm text-muted">
             <CheckCircle2 aria-hidden="true" className="text-brand" size={16} />
             Clear guidance. Citizen-approved action. No false closure claims.
@@ -105,44 +117,59 @@ export default function Home() {
 
         <div className="relative mx-auto w-full max-w-lg lg:pt-3">
           <div className="absolute -right-16 top-14 -z-10 size-56 rounded-full bg-[#d9f1e8] blur-3xl" />
-          <Card className="relative overflow-hidden rounded-[1.75rem] border-white/80 shadow-surface">
-            <div className="border-b border-line bg-[#fbfdfc] px-6 py-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="eyebrow">Civic safety brief</p>
-                  <h2 className="mt-2 font-display text-xl font-bold tracking-tight">Waterlogging near Market Road</h2>
-                </div>
-                <Badge tone="urgent">High urgency</Badge>
-              </div>
-              <div className="mt-4 flex items-center gap-1.5 text-sm text-muted">
-                <MapPin aria-hidden="true" size={15} /> Central Market, Ward 14
-              </div>
+          <LocationSafetySnapshot />
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-5 pb-20 lg:px-8 lg:pb-28">
+        <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-stretch">
+          <div className="rounded-3xl border border-line bg-surface p-6 shadow-sm sm:p-8">
+            <p className="eyebrow">Your city safety layer</p>
+            <h2 className="mt-3 font-display text-3xl font-bold tracking-tight">A quiet safety check before you move.</h2>
+            <p className="mt-4 leading-7 text-muted">
+              CivicShield reads nearby reports like a local pulse: civic hazards, urgent incidents, women-safety signals, and safer public places.
+            </p>
+            <div className="mt-6 grid gap-3">
+              <StoryPoint icon={<MapPin aria-hidden="true" size={17} />} title="Detect where you are" detail="Current area appears first, not raw coordinates." />
+              <StoryPoint icon={<Radar aria-hidden="true" size={17} />} title="Scan recent signals" detail="Last 24 hours of nearby reports shape the warning." />
+              <StoryPoint icon={<Venus aria-hidden="true" size={17} />} title="Protect vulnerable users" detail="Women and minors get quick access to police, safer public places, and emergency logging." />
             </div>
-            <CardContent className="space-y-5 p-6">
-              <div className="rounded-2xl border border-[#cbe8dd] bg-[#effaf5] p-4">
-                <p className="text-xs font-bold uppercase tracking-[0.12em] text-brand">Safety recommendation</p>
-                <p className="mt-2 text-sm leading-6 text-[#31544b]">
-                  Avoid standing water near exposed electrical infrastructure. Keep pedestrians away and report the location immediately.
-                </p>
-              </div>
-              <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-4 text-sm">
-                <ClipboardCheck aria-hidden="true" className="text-brand" size={18} />
-                <div>
-                  <p className="font-semibold">Structured report created</p>
-                  <p className="mt-0.5 text-muted">Category, urgency, and location captured.</p>
-                </div>
-                <FileText aria-hidden="true" className="text-brand" size={18} />
-                <div>
-                  <p className="font-semibold">Complaint ready for review</p>
-                  <p className="mt-0.5 text-muted">The citizen approves before anything is sent.</p>
-                </div>
-              </div>
-              <div className="flex items-center justify-between border-t border-line pt-4 text-sm font-medium">
-                <span className="text-muted">Resolution status</span>
-                <span className="flex items-center gap-1 text-brand">Under review <ChevronRight size={15} /></span>
-              </div>
-            </CardContent>
-          </Card>
+          </div>
+
+          <div className="relative min-h-96 overflow-hidden rounded-3xl border border-[#cfe6dd] bg-[#eef8f4] p-5 shadow-surface sm:p-7">
+            <div className="absolute inset-0 opacity-70 bg-[linear-gradient(#cfe2dc_1px,transparent_1px),linear-gradient(90deg,#cfe2dc_1px,transparent_1px)] bg-size-[42px_42px]" />
+            <div className="absolute left-8 top-8 rounded-2xl border border-[#cfe6dd] bg-white/90 px-4 py-3 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-brand">Current location</p>
+              <p className="mt-1 text-sm font-bold">New area detected</p>
+            </div>
+            <div className="absolute right-8 top-10 rounded-2xl border border-[#f0c6d8] bg-[#fff7fb] px-4 py-3 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#9b2755]">Women safety</p>
+              <p className="mt-1 text-sm font-bold">Police nearby</p>
+            </div>
+            <div className="absolute bottom-8 left-8 rounded-2xl border border-[#efc7bf] bg-[#fff8f6] px-4 py-3 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-danger">Recent alert</p>
+              <p className="mt-1 text-sm font-bold">Unsafe area report</p>
+            </div>
+            <div className="absolute bottom-10 right-10 rounded-2xl border border-[#ead9b8] bg-[#fffaf0] px-4 py-3 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-warning">Civic risk</p>
+              <p className="mt-1 text-sm font-bold">Waterlogging</p>
+            </div>
+
+            <div className="absolute left-1/2 top-1/2 size-56 -translate-x-1/2 -translate-y-1/2 rounded-full border border-brand/20" />
+            <div className="absolute left-1/2 top-1/2 size-36 -translate-x-1/2 -translate-y-1/2 rounded-full border border-brand/30" />
+            <div className="absolute left-1/2 top-1/2 grid size-20 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-3xl bg-brand text-white shadow-surface">
+              <ShieldCheck aria-hidden="true" size={34} />
+            </div>
+
+            <div className="absolute left-[31%] top-[38%] h-1 w-24 -rotate-12 rounded-full bg-brand/30" />
+            <div className="absolute right-[30%] top-[42%] h-1 w-28 rotate-12 rounded-full bg-[#a22a58]/25" />
+            <div className="absolute bottom-[36%] left-[32%] h-1 w-28 rotate-28 rounded-full bg-danger/25" />
+            <div className="absolute bottom-[38%] right-[31%] h-1 w-24 rotate-[-28deg] rounded-full bg-warning/30" />
+
+            <div className="absolute left-1/2 top-6 flex -translate-x-1/2 items-center gap-2 rounded-full border border-line bg-white px-4 py-2 text-xs font-bold text-muted shadow-sm">
+              <Route aria-hidden="true" size={14} /> Route-aware safety check
+            </div>
+          </div>
         </div>
       </section>
 
@@ -150,13 +177,13 @@ export default function Home() {
         <div className="mx-auto max-w-7xl">
           <div className="max-w-2xl">
             <p className="eyebrow">Choose the right path</p>
-            <h2 className="mt-3 font-display text-3xl font-bold tracking-tight sm:text-4xl">Two services. One safety-first principle.</h2>
+            <h2 className="mt-3 font-display text-3xl font-bold tracking-tight sm:text-4xl">Three services. One safety-first principle.</h2>
             <p className="mt-4 text-lg leading-8 text-muted">
               Select the path that matches your situation. CivicShield makes the difference clear from the first screen.
             </p>
           </div>
 
-          <div className="mt-10 grid gap-5 lg:grid-cols-2">
+          <div className="mt-10 grid gap-5 lg:grid-cols-3">
             <ServiceCard
               href="/report"
               icon={<MapPin aria-hidden="true" size={25} />}
@@ -176,6 +203,16 @@ export default function Home() {
               action="Open emergency help"
               points={["Call 112 is always the first action", "Instant safety checklist", "Optional follow-up hazard report"]}
               tone="emergency"
+            />
+            <ServiceCard
+              href="/emergency?type=women"
+              icon={<Venus aria-hidden="true" size={25} />}
+              label="For women safety"
+              title="Find nearby police and safer public places"
+              description="For harassment, stalking, unsafe travel, suspicious surroundings, or when a woman needs fast location-aware help."
+              action="Open women safety"
+              points={["Nearby police stations", "Crowded safer public places", "Quick women safety incident note"]}
+              tone="women"
             />
           </div>
         </div>
@@ -202,7 +239,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="trust" className="mx-5 mb-20 rounded-[2rem] bg-[#133a33] px-6 py-10 text-white sm:mx-8 sm:px-10 lg:mx-auto lg:max-w-7xl lg:px-14 lg:py-14">
+      <section id="trust" className="mx-5 mb-20 rounded-4xl bg-[#133a33] px-6 py-10 text-white sm:mx-8 sm:px-10 lg:mx-auto lg:max-w-7xl lg:px-14 lg:py-14">
         <div className="grid gap-10 lg:grid-cols-[1fr_auto] lg:items-center">
           <div className="max-w-2xl">
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#9ed8c6]">Built for honest accountability</p>
@@ -211,7 +248,7 @@ export default function Home() {
               CivicShield separates an authority&apos;s closure update from community verification—so citizens can confirm, dispute, or reopen a report based on what actually happened on the ground.
             </p>
           </div>
-          <div className="flex min-w-[13rem] items-center gap-3 rounded-2xl border border-white/15 bg-white/10 p-4">
+          <div className="flex min-w-52 items-center gap-3 rounded-2xl border border-white/15 bg-white/10 p-4">
             <span className="grid size-10 place-items-center rounded-xl bg-[#a7e4d1] text-[#0a4c40]">
               <CheckCircle2 aria-hidden="true" size={21} />
             </span>
@@ -235,6 +272,18 @@ export default function Home() {
   );
 }
 
+function StoryPoint({ icon, title, detail }: { icon: React.ReactNode; title: string; detail: string }) {
+  return (
+    <div className="flex gap-3 rounded-2xl border border-line bg-[#fbfdfc] p-4">
+      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">{icon}</span>
+      <div>
+        <p className="text-sm font-bold">{title}</p>
+        <p className="mt-1 text-sm leading-6 text-muted">{detail}</p>
+      </div>
+    </div>
+  );
+}
+
 function ServiceCard({
   href,
   icon,
@@ -252,20 +301,27 @@ function ServiceCard({
   description: string;
   action: string;
   points: string[];
-  tone: "civic" | "emergency";
+  tone: "civic" | "emergency" | "women";
 }) {
   const isEmergency = tone === "emergency";
+  const isWomenSafety = tone === "women";
 
   return (
     <article
       className={`group relative overflow-hidden rounded-3xl border p-7 transition duration-300 hover:-translate-y-1 hover:shadow-surface sm:p-8 ${
-        isEmergency ? "border-[#efd5cf] bg-[#fffaf8]" : "border-[#cfe6dd] bg-[#f8fdfb]"
+        isEmergency
+          ? "border-[#efd5cf] bg-[#fffaf8]"
+          : isWomenSafety
+            ? "border-[#f0c6d8] bg-[#fff7fb]"
+            : "border-[#cfe6dd] bg-[#f8fdfb]"
       }`}
     >
-      <div className={`grid size-12 place-items-center rounded-2xl ${isEmergency ? "bg-[#ffe5de] text-danger" : "bg-brand-soft text-brand"}`}>
+      <div className={`grid size-12 place-items-center rounded-2xl ${
+        isEmergency ? "bg-[#ffe5de] text-danger" : isWomenSafety ? "bg-[#ffe4f0] text-[#a22a58]" : "bg-brand-soft text-brand"
+      }`}>
         {icon}
       </div>
-      <p className={`mt-7 text-xs font-bold uppercase tracking-[0.12em] ${isEmergency ? "text-danger" : "text-brand"}`}>{label}</p>
+      <p className={`mt-7 text-xs font-bold uppercase tracking-[0.12em] ${isEmergency ? "text-danger" : isWomenSafety ? "text-[#a22a58]" : "text-brand"}`}>{label}</p>
       <h3 className="mt-2 max-w-md font-display text-2xl font-bold tracking-tight">{title}</h3>
       <p className="mt-3 max-w-xl leading-7 text-muted">{description}</p>
       <ul className="mt-6 space-y-2.5 text-sm text-[#426058]">
@@ -276,7 +332,7 @@ function ServiceCard({
           </li>
         ))}
       </ul>
-      <Button asChild className="mt-8" variant={isEmergency ? "danger" : "primary"}>
+      <Button asChild className={`mt-8 ${isWomenSafety ? "bg-[#a22a58] hover:bg-[#872047]" : ""}`} variant={isEmergency ? "danger" : "primary"}>
         <Link href={href}>
           {isEmergency && <PhoneCall aria-hidden="true" size={16} />}
           {action} <ArrowRight aria-hidden="true" size={16} />

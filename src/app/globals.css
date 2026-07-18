@@ -72,3 +72,21 @@ select {
   position: relative;
   z-index: 0;
 }
+
+.emergency-marquee {
+  animation: emergency-marquee 28s linear infinite;
+}
+
+.emergency-marquee:hover {
+  animation-play-state: paused;
+}
+
+@keyframes emergency-marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}

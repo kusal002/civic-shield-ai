@@ -432,7 +432,7 @@ civic-shield-ai/
 └── README.md
 ```
 
-> The following planned paths are not yet implemented: `/emergency`, a public report-detail page, and a moderator workspace.
+> The following planned path is not yet implemented: a moderator workspace. `/emergency`, `/dashboard`, and public report-detail pages now exist.
 
 ---
 
@@ -446,10 +446,10 @@ We will complete one milestone at a time and pause after each one for review. Th
 | 2 | Project scaffold and design system only | Complete |
 | 3 | Home page with the two service choices | Complete |
 | 4 | Civic reporting form, map location, local evidence storage, and persistent report creation | Complete |
-| 5 | Emergency page with instant local safety detection | Pending |
+| 5 | Emergency page with instant local safety detection | Complete |
 | 6 | Free-AI analysis with a reliable fallback | Complete |
 | 7 | Complaint, routing preview, and citizen-confirmed email workflow | Complete for the hackathon MVP |
-| 8 | Public dashboard and persistent status tracking | Partially complete — dashboard + delivery status are live; moderator timeline and community verification are pending |
+| 8 | Public dashboard and persistent status tracking | Partially complete — location-scoped dashboard, public report detail, delivery status, and public timelines are live; moderator-only status updates and community verification controls are pending |
 | 9 | Mobile polish, demo data, testing, and deployment readiness | Pending |
 
 ### Step 2 delivery notes
@@ -485,7 +485,7 @@ The landing page now delivers the product's primary decision clearly:
 - An accountability section that explains the difference between a department claim and community-verified resolution.
 - Responsive desktop and mobile layouts, reviewed in a live browser preview.
 
-The service links are intentionally routed to `/report` and `/emergency`, which are the next two planned workflows. Those routes will be implemented in Steps 4 and 5.
+The service links route to `/report`, `/emergency`, and `/emergency?type=women`, which are now implemented for the hackathon MVP.
 
 ### Step 4 delivery notes
 
@@ -574,38 +574,70 @@ The citizen must still review the recipient and message and check the authorizat
 
 #### Completed
 
-- Polished landing page with civic-report and emergency-service entry points.
+- Polished landing page with civic-report, emergency-service, women-safety, and live place-safety entry points.
+- Location Safety Snapshot on the home page: detects the user's current area, distinguishes a first-time local visit from a repeat visit in this browser, and checks recent nearby civic/emergency signals from the last 24 hours.
+- Illustrative home experience with a safety-intelligence story section, abstract city-signal visual, and clear hackathon positioning: whether the user is at home or visiting a new place, CivicShield helps them understand nearby risk and reach support quickly.
 - Civic report form with validation, map pinning, current location, address suggestions, readable address + coordinates, image/video selection, and live camera capture.
+- Civic report time capture now uses a calendar/date-time picker instead of manual duration typing.
 - Groq free-tier analysis with an offline deterministic fallback.
 - Structured safety brief, urgency warning, formal complaint, and consistently formatted, editable department email.
 - Source-tracked editable government-recipient directory for the current West Bengal pilot locations.
 - Gmail owner-account sending after explicit citizen confirmation, evidence attachments, local delivery receipt, and no false "resolved" claim.
-- Supabase server-side report creation, analysis persistence, delivery-confirmed persistence, and public `/dashboard` feed.
+- Dedicated `/emergency` route with immediate `Call 112 Now`, quick categories for women safety, fire, medical, live wire, accident, and unsafe area, situation-specific checklists, and a compact emergency record.
+- Women-safety mode with nearby police stations, safer public places, direct call links where contact numbers are available, and a quick incident note.
+- Google-backed reverse geocoding and place lookup through server routes when `GOOGLE_MAPS_API_KEY` is configured, with OpenStreetMap/Overpass fallback.
+- Nearby emergency help cards for police, hospitals, ambulance services, fire stations, and safer public places, including visible phone numbers and `tel:` call buttons when the map provider returns a number.
+- Supabase server-side report creation, analysis persistence, delivery-confirmed persistence, and a location-scoped public `/dashboard` feed.
+- Public dashboard now requests the user's location and shows complaints around that location, with lodged time, distance, status, and clickable report rows.
+- Public report-detail page at `/dashboard/[reportId]` with detailed report text, lodged timestamp, incident time, route, evidence count, public status timeline, and safety analysis.
+- Site-wide emergency alert marquee that shows latest nearby lodged emergencies, including women-safety alerts, when emergency reports are persisted.
+- Supabase-backed emergency report API and schema for shared emergency alerts, with local emergency-note fallback.
 - Responsive visual fixes for map autocomplete stacking and email-send controls.
 
 #### Setup still required before persistent tracking works
 
 - Run `supabase/schema.sql` once in the correct Supabase project’s SQL Editor.
-- Add the same Supabase, Groq, and Gmail environment variables to Vercel before deploying.
+- If the schema was run before emergency alerts were added, run the latest `supabase/schema.sql` again so `emergency_reports` exists.
+- Add the same Supabase, Groq, Gmail, and Google environment variables to Vercel before deploying.
+- Enable Google **Geocoding API** for readable addresses and Google **Places API / Places API (New)** for nearby stations, hospitals, safer public places, and phone numbers.
 
 #### Pending next steps
 
-1. **Step 5 — Emergency route:** build the dedicated `/emergency` page with immediate 112 action and local safety guidance.
-2. **Finish Step 8 — Accountability workflow:** report-detail page, public status timeline, moderator-only status updates, and community verification/dispute/reopen controls.
+1. **Finish Step 8 — Accountability workflow:** moderator-only status updates and community verification/dispute/reopen controls.
+2. **Emergency alert hardening:** add moderation/rate limits for emergency reports, tune alert radius, and decide what emergency details are safe to show publicly.
 3. **Directory expansion:** add verified municipal contacts city-by-city; never guess nationwide recipients.
 4. **Step 9 — Launch quality:** mobile QA, seeded demo reports, rate limiting/moderator access, privacy review, Vercel configuration, and final hackathon demo script.
 
-### Next milestone: persistent public tracking
+### Next milestone: moderated accountability
 
-Browser-local reports are intentionally temporary. The next build step is a hosted PostgreSQL database (Supabase free tier) and a public tracking dashboard. The public view will show a report reference, general location, category, timestamps, and verified workflow status. Raw evidence, exact personal text, and moderator actions must remain private until reviewed; only authorised moderators can change a report from `delivery confirmed` to later status stages.
+Supabase-backed public tracking is now implemented for the hackathon MVP. The next build step is moderated accountability: authorised moderator status updates, community verification, dispute/reopen controls, stale-case handling, and stricter controls over what emergency details may become public. Raw evidence, private contact details, email recipients, Gmail message IDs, and moderator-only actions must remain private.
 
 ### Step 8 delivery notes: Supabase persistence and public tracking
 
 - New reports are created through a server-side Supabase route and receive a globally unique `CS-YYYY-XXXXXXXX` public reference.
 - AI classification and Gmail delivery-confirmed status are written back to the persistent report record.
-- `/dashboard` is a public, server-rendered accountability feed. It exposes only report reference, routed category, urgency, location label, timestamps, and workflow status—not raw report prose, evidence, email addresses, or Gmail message IDs.
-- `supabase/schema.sql` creates the reports table and immutable status-event table. Row Level Security is enabled with no browser policies; only server routes using `SUPABASE_SERVICE_ROLE_KEY` can access the database.
+- `/dashboard` is now a location-scoped public accountability feed. It requests current browser location, shows complaints near that location, and displays lodged time, workflow status, and distance where available.
+- Each dashboard row links to `/dashboard/[reportId]`, a public detail page with report description, incident date/time, public timeline, route, evidence count, and safety analysis. Private evidence files, email addresses, and Gmail message IDs remain hidden.
+- `supabase/schema.sql` creates the reports table, immutable status-event table, and emergency-report table. Row Level Security is enabled with no browser policies; only server routes using `SUPABASE_SERVICE_ROLE_KEY` can access the database.
 - The report screen fails clearly if database setup is incomplete instead of silently pretending that the report is publicly persisted.
+
+### Step 5 delivery notes: Emergency and women safety
+
+- `/emergency` now prioritizes a large `Call 112 Now` action, then lets the user pick a quick emergency category.
+- Supported emergency categories are women safety, fire, medical, live wire, accident, and unsafe area.
+- The emergency page requests live location and uses it across safety guidance, nearby help, and the quick incident record.
+- Nearby help is dynamic: police stations, hospitals, ambulance services, fire stations, and safer public places are fetched from Google Places when configured, with OpenStreetMap/Overpass fallback.
+- Contact numbers and direct `tel:` call buttons are shown when the map provider returns a listed phone number.
+- Women-safety mode highlights nearby police stations and safer public places and lets the user lodge a quick women-safety incident.
+- Emergency notes are saved to Supabase through `/api/emergency-reports` when configured, and fall back to browser local storage if persistence is unavailable.
+- A site-wide emergency alert marquee shows latest nearby lodged emergencies and women-safety alerts.
+
+### Location intelligence delivery notes
+
+- The home page now sells CivicShield as a safety companion for both familiar places and new locations.
+- The Location Safety Snapshot shows the user's readable current location first, detects first-time versus repeat visits from this browser, and checks recent nearby civic complaints and emergencies from the last 24 hours.
+- If recent signals exist, the snapshot shows counts and recent items for civic complaints, emergencies, and women-safety incidents. If none exist, it shows a positive "good to go" message.
+- The public dashboard uses the same location-first idea and adds an illustrative safety-intelligence hero.
 
 #### Activate the database
 
@@ -619,6 +651,7 @@ Required environment variables are documented in `.env.example`:
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
+GOOGLE_MAPS_API_KEY=
 ```
 
 ## MVP Boundary

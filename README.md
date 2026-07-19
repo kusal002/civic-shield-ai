@@ -592,12 +592,17 @@ The citizen must still review the recipient and message and check the authorizat
 - Public report-detail page at `/dashboard/[reportId]` with detailed report text, lodged timestamp, incident time, route, evidence count, public status timeline, and safety analysis.
 - Site-wide emergency alert marquee that shows latest nearby lodged emergencies, including women-safety alerts, when emergency reports are persisted.
 - Supabase-backed emergency report API and schema for shared emergency alerts, with local emergency-note fallback.
+- Floating **Civic Sense Check** action on the homepage for short public-awareness stories, 30-second video/audio capture or upload, typed context, automatic location attachment, AI-generated Instagram caption/hashtags, moderator email notification, and a success acknowledgement to the user.
+- Moderator **Civic Sense posts** queue for reviewing submissions, generated captions, hashtags, media summary, location, and Instagram posting status before anything is posted publicly.
+- Civic Sense media is stored in Supabase Storage for moderator preview. On final approval, the moderator sees an Instagram review modal and can proceed to publish through the official Instagram Graph API when credentials and public media/default-image URLs are configured.
 - Responsive visual fixes for map autocomplete stacking and email-send controls.
 
 #### Setup still required before persistent tracking works
 
 - Run `supabase/schema.sql` once in the correct Supabase project’s SQL Editor.
 - If the schema was run before emergency alerts were added, run the latest `supabase/schema.sql` again so `emergency_reports` exists.
+- If the schema was run before Civic Sense Check was added, run the latest `supabase/schema.sql` again so `civic_sense_submissions` exists.
+- If the Civic Sense table already exists, run the latest schema again so `media_urls`, `instagram_media_id`, and `instagram_post_url` columns are added.
 - Add the same Supabase, Groq, Gmail, and Google environment variables to Vercel before deploying.
 - Enable Google **Geocoding API** for readable addresses and Google **Places API / Places API (New)** for nearby stations, hospitals, safer public places, and phone numbers.
 
@@ -715,6 +720,16 @@ The destructive delete action uses a CivicShield in-app confirmation modal rathe
 - Emergency reports now support city filtering using only cities represented in stored records. Moderators can select one or many emergency reports and permanently delete false or obsolete records through the same protected confirmation flow.
 - Emergency summary metrics use a fixed label area so counts align cleanly across desktop and mobile layouts.
 
+### Civic Sense social queue — 19 July 2026
+
+- The homepage now includes a floating Civic Sense Check button with a modal for typing, voice recording, video recording, or media upload.
+- Submissions attach the user’s current location when permission is granted and are queued in Supabase instead of posted directly.
+- Groq generates a calm public-awareness caption, category, hashtags, and safety note, with deterministic fallback text when the AI provider is unavailable.
+- The configured moderator email receives submission details and attached media. The user sees a confirmation that the CivicShield team received the post and will review it.
+- `/moderator` includes a **Civic Sense posts** tab where the team can approve, reject, or mark posts as manually posted to the configured Instagram account.
+- The **Approve for Instagram** action opens a final review modal. **Proceed to upload** posts a video submission as a Reel, or uses the configured default CivicShield image for text-only and voice-only submissions.
+- Instagram publishing requires a public `image_url` or `video_url`; local `localhost` URLs cannot be fetched by Instagram.
+
 Required environment variables are documented in `.env.example`:
 
 ```text
@@ -722,6 +737,14 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 GOOGLE_MAPS_API_KEY=
+CIVIC_SENSE_MODERATOR_EMAIL=
+CIVIC_SENSE_INSTAGRAM_HANDLE=
+CIVIC_SENSE_MEDIA_BUCKET=
+CIVIC_SENSE_DEFAULT_IMAGE_URL=
+NEXT_PUBLIC_SITE_URL=
+INSTAGRAM_API_VERSION=
+INSTAGRAM_IG_USER_ID=
+INSTAGRAM_ACCESS_TOKEN=
 ```
 
 ## MVP Boundary

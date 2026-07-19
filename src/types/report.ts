@@ -127,3 +127,26 @@ export interface EmergencyReport {
   priority?: UrgencyLevel;
   priorityReason?: string;
 }
+
+export type CivicSenseStatus = "needs-review" | "approved" | "posted" | "rejected";
+
+export interface CivicSenseSubmission {
+  id: string;
+  experience: string;
+  locationLabel: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  mediaCount: number;
+  mediaTypes: string[];
+  mediaUrls: string[];
+  aiCaption: string;
+  aiCategory: string;
+  aiHashtags: string[];
+  aiSafetyNote: string;
+  status: CivicSenseStatus;
+  instagramHandle: string | null;
+  instagramMediaId: string | null;
+  instagramPostUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

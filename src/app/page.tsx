@@ -15,6 +15,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CivicSenseFab } from "@/components/landing/civic-sense-fab";
 import { FeedbackSection } from "@/components/landing/feedback-section";
 import { LocationSafetySnapshot } from "@/components/landing/location-safety-snapshot";
 import { QuickIncidentRecordSlot } from "@/components/landing/quick-incident-record-slot";
@@ -252,6 +253,7 @@ export default function Home() {
         </div>
       </section>
       <FeedbackSection />
+      <CivicSenseFab />
     </main>
   );
 }

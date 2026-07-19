@@ -1,12 +1,12 @@
 "use client";
 
-import { Building2, CalendarDays, ChevronLeft, ChevronRight, ExternalLink, Eye, Filter, MapPin, RefreshCw, ShieldAlert, ShieldCheck, Trash2, Venus } from "lucide-react";
+import { Building2, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, ExternalLink, Eye, Filter, MapPin, RefreshCw, ShieldAlert, ShieldCheck, Sparkles, Trash2, Venus, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import type { EmergencyReport, ReportStatus, UrgencyLevel } from "@/types/report";
+import type { CivicSenseStatus, CivicSenseSubmission, EmergencyReport, ReportStatus, UrgencyLevel } from "@/types/report";
 
 type ModeratorReport = {
   id: string; description: string; locationLabel: string; latitude: number | null; longitude: number | null;
@@ -15,7 +15,7 @@ type ModeratorReport = {
   createdAt: string; updatedAt: string; emailRecipient: string | null; gmailMessageId: string | null;
 };
 type PresetRange = "all" | "7" | "14" | "30" | "custom";
-type Tab = "civic" | "emergency";
+type Tab = "civic" | "emergency" | "civic-sense";
 
 const statuses: ReportStatus[] = ["acknowledged", "assigned", "in-progress", "department-resolved", "verification-pending", "verified-resolved", "disputed", "reopened", "overdue"];
 
@@ -25,8 +25,10 @@ export function ModeratorWorkspace() {
   const [activeTab, setActiveTab] = useState<Tab>("emergency");
   const [reports, setReports] = useState<ModeratorReport[]>([]);
   const [emergencyReports, setEmergencyReports] = useState<EmergencyReport[]>([]);
+  const [civicSenseSubmissions, setCivicSenseSubmissions] = useState<CivicSenseSubmission[]>([]);
   const [selected, setSelected] = useState<ModeratorReport | null>(null);
   const [selectedEmergency, setSelectedEmergency] = useState<EmergencyReport | null>(null);
+  const [selectedCivicSense, setSelectedCivicSense] = useState<CivicSenseSubmission | null>(null);
   const [status, setStatus] = useState<ReportStatus>("acknowledged");
   const [note, setNote] = useState("");
   const [message, setMessage] = useState("");
@@ -39,20 +41,26 @@ export function ModeratorWorkspace() {
   async function loadReports() {
     setLoading(true);
     try {
-      const [civicResponse, emergencyResponse] = await Promise.all([
+      const [civicResponse, emergencyResponse, civicSenseResponse] = await Promise.all([
         fetch("/api/moderator/reports", { cache: "no-store" }),
         fetch("/api/moderator/emergencies", { cache: "no-store" }),
+        fetch("/api/moderator/civic-sense", { cache: "no-store" }),
       ]);
       const civicPayload = await civicResponse.json() as { reports?: ModeratorReport[]; error?: string };
       const emergencyPayload = await emergencyResponse.json() as { reports?: EmergencyReport[]; error?: string };
+      const civicSensePayload = await civicSenseResponse.json() as { submissions?: CivicSenseSubmission[]; error?: string };
       if (!civicResponse.ok) throw new Error(civicPayload.error ?? "Could not load civic reports.");
       if (!emergencyResponse.ok) throw new Error(emergencyPayload.error ?? "Could not load emergency reports.");
+      if (!civicSenseResponse.ok) throw new Error(civicSensePayload.error ?? "Could not load civic sense posts.");
       const nextCivic = civicPayload.reports ?? [];
       const nextEmergency = emergencyPayload.reports ?? [];
+      const nextCivicSense = civicSensePayload.submissions ?? [];
       setReports(nextCivic);
       setEmergencyReports(nextEmergency);
+      setCivicSenseSubmissions(nextCivicSense);
       setSelected((current) => current ? nextCivic.find((report) => report.id === current.id) ?? null : null);
       setSelectedEmergency((current) => current ? nextEmergency.find((report) => report.id === current.id) ?? null : null);
+      setSelectedCivicSense((current) => current ? nextCivicSense.find((submission) => submission.id === current.id) ?? null : null);
       setCivicSelection((current) => current.filter((id) => nextCivic.some((report) => report.id === id)));
       setEmergencySelection((current) => current.filter((id) => nextEmergency.some((report) => report.id === id)));
     } catch (error) {
@@ -89,6 +97,29 @@ export function ModeratorWorkspace() {
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Status update failed.");
     }
+  }
+
+  async function updateCivicSenseSubmissionStatus(submissionId: string, nextStatus: CivicSenseStatus) {
+    try {
+      const response = await fetch(`/api/moderator/civic-sense/${encodeURIComponent(submissionId)}/status`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: nextStatus }),
+      });
+      const payload = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "Civic Sense status update failed.");
+      setMessage(`Civic Sense post ${submissionId} marked ${nextStatus.replaceAll("-", " ")}.`);
+      await loadReports();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Civic Sense status update failed.");
+    }
+  }
+
+  async function publishCivicSenseToInstagram(submissionId: string) {
+    const response = await fetch(`/api/moderator/civic-sense/${encodeURIComponent(submissionId)}/publish`, { method: "POST" });
+    const payload = await response.json() as { instagramMediaId?: string; postUrl?: string | null; error?: string };
+    if (!response.ok || !payload.instagramMediaId) throw new Error(payload.error ?? "Instagram publish failed.");
+    setMessage(`Civic Sense post ${submissionId} published to Instagram.`);
+    await loadReports();
+    return payload;
   }
 
   async function confirmDelete() {
@@ -129,13 +160,20 @@ export function ModeratorWorkspace() {
         <h1 className="mt-3 flex items-center gap-2 font-display text-3xl font-bold"><ShieldCheck className="text-brand" /> Moderator controls</h1>
         {!signedIn ? <LoginCard accessKey={accessKey} message={message} onChange={setAccessKey} onLogin={() => void login()} /> : <div className="mt-6">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-line bg-surface p-3">
-            <div className="flex rounded-2xl bg-[#eef6f3] p-1">
+            <div className="flex flex-wrap rounded-2xl bg-[#eef6f3] p-1">
               <TabButton active={activeTab === "emergency"} onClick={() => setActiveTab("emergency")}><ShieldAlert size={16} /> Emergency reports</TabButton>
               <TabButton active={activeTab === "civic"} onClick={() => setActiveTab("civic")}><Building2 size={16} /> Civic reports</TabButton>
+              <TabButton active={activeTab === "civic-sense"} onClick={() => setActiveTab("civic-sense")}><Sparkles size={16} /> Civic Sense posts</TabButton>
             </div>
             <Button size="sm" variant="outline" onClick={() => void loadReports()}><RefreshCw size={15} /> {loading ? "Loading…" : "Refresh"}</Button>
           </div>
-          {activeTab === "emergency" ? <EmergencyModeration reports={emergencyReports} selected={selectedEmergency} selectedIds={emergencySelection} onDelete={(ids) => setDeleteRequest({ kind: "emergency", ids })} onSelect={setSelectedEmergency} onSelectionChange={setEmergencySelection} /> : <CivicModeration
+          {activeTab === "emergency" ? <EmergencyModeration reports={emergencyReports} selected={selectedEmergency} selectedIds={emergencySelection} onDelete={(ids) => setDeleteRequest({ kind: "emergency", ids })} onSelect={setSelectedEmergency} onSelectionChange={setEmergencySelection} /> : activeTab === "civic-sense" ? <CivicSenseModeration
+            selected={selectedCivicSense}
+            submissions={civicSenseSubmissions}
+            onSelect={setSelectedCivicSense}
+            onPublish={(submissionId) => publishCivicSenseToInstagram(submissionId)}
+            onStatusChange={(submissionId, nextStatus) => void updateCivicSenseSubmissionStatus(submissionId, nextStatus)}
+          /> : <CivicModeration
             reports={reports} selected={selected} selectedIds={civicSelection} status={status} note={note}
             onDelete={(ids) => setDeleteRequest({ kind: "civic", ids })}
             onNoteChange={setNote} onSelect={selectCivic} onSelectionChange={setCivicSelection}
@@ -152,6 +190,83 @@ export function ModeratorWorkspace() {
 
 function LoginCard({ accessKey, message, onChange, onLogin }: { accessKey: string; message: string; onChange: (value: string) => void; onLogin: () => void }) {
   return <Card className="mt-6 max-w-xl rounded-3xl"><CardContent className="p-6"><p className="text-sm leading-6 text-muted">Sign in with the server-configured moderator access key.</p><input className="mt-5 h-12 w-full rounded-xl border border-line px-3" type="password" value={accessKey} onChange={(event) => onChange(event.target.value)} placeholder="Moderator access key" /><Button className="mt-3" onClick={onLogin}>Sign in</Button>{message ? <p className="mt-4 text-sm font-semibold text-danger">{message}</p> : null}</CardContent></Card>;
+}
+
+function CivicSenseModeration({ selected, submissions, onPublish, onSelect, onStatusChange }: { selected: CivicSenseSubmission | null; submissions: CivicSenseSubmission[]; onPublish: (submissionId: string) => Promise<{ instagramMediaId?: string; postUrl?: string | null }>; onSelect: (submission: CivicSenseSubmission) => void; onStatusChange: (submissionId: string, status: CivicSenseStatus) => void }) {
+  const needsReview = submissions.filter((submission) => submission.status === "needs-review").length;
+  const approved = submissions.filter((submission) => submission.status === "approved").length;
+  const sorted = useMemo(() => [...submissions].sort((first, second) => new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime()), [submissions]);
+  return <div className="mt-6 grid gap-6 lg:grid-cols-[0.82fr_1.18fr]">
+    <Card className="rounded-3xl"><CardContent className="p-5">
+      <div className="grid gap-3 sm:grid-cols-3"><Metric label="Total posts" value={String(submissions.length)} /><Metric label="Needs review" value={String(needsReview)} tone="danger" /><Metric label="Approved" value={String(approved)} /></div>
+      <div className="mt-5"><p className="font-display text-xl font-bold">Civic Sense queue</p><p className="mt-1 text-sm text-muted">Newest public-awareness submissions for Instagram review.</p></div>
+      <div className="mt-5 max-h-[34rem] space-y-2 overflow-y-auto pr-1">{sorted.length ? sorted.map((submission) => <button className={`w-full rounded-2xl border p-3 text-left transition ${selected?.id === submission.id ? "border-brand bg-brand-soft" : "border-line bg-[#fbfdfc] hover:border-brand/40"}`} key={submission.id} type="button" onClick={() => onSelect(submission)}><div className="flex items-center justify-between gap-2"><span className="font-mono text-xs font-bold text-brand">{submission.id}</span><CivicSenseStatusBadge status={submission.status} /></div><p className="mt-2 text-sm font-bold">{submission.aiCategory || "Public civic sense"}</p><p className="mt-1 line-clamp-2 text-xs leading-5 text-muted">{submission.experience}</p><p className="mt-2 text-xs font-semibold text-muted">{submission.locationLabel || "Location not captured"} · {formatDate(submission.createdAt)}</p></button>) : <p className="rounded-xl bg-[#fbfdfc] p-4 text-sm text-muted">No Civic Sense posts have been submitted yet.</p>}</div>
+    </CardContent></Card>
+    <Card className="rounded-3xl"><CardContent className="p-6 sm:p-7">{selected ? <CivicSenseDetail submission={selected} onPublish={onPublish} onStatusChange={onStatusChange} /> : <EmptyState icon={<Sparkles className="mx-auto text-brand" size={30} />} title="Select a Civic Sense post" detail="Review the citizen story, AI caption, hashtags, media summary, and posting status." />}</CardContent></Card>
+  </div>;
+}
+
+function CivicSenseDetail({ submission, onPublish, onStatusChange }: { submission: CivicSenseSubmission; onPublish: (submissionId: string) => Promise<{ instagramMediaId?: string; postUrl?: string | null }>; onStatusChange: (submissionId: string, status: CivicSenseStatus) => void }) {
+  const mapsUrl = mapsLink(submission.latitude, submission.longitude);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [publishMessage, setPublishMessage] = useState("");
+  async function proceedToPublish() {
+    setPublishing(true);
+    setPublishMessage("Uploading to Instagram...");
+    try {
+      const result = await onPublish(submission.id);
+      setPublishMessage(`Published successfully. Instagram media ID: ${result.instagramMediaId}`);
+      setReviewOpen(false);
+    } catch (error) {
+      setPublishMessage(error instanceof Error ? error.message : "Instagram publish failed.");
+    } finally {
+      setPublishing(false);
+    }
+  }
+  return <>
+    <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-mono text-xs font-bold text-brand">{submission.id}</p><h2 className="mt-2 font-display text-2xl font-bold">{submission.aiCategory || "Civic Sense post"}</h2></div><CivicSenseStatusBadge status={submission.status} /></div>
+    <div className="mt-6 rounded-2xl border border-line bg-[#fbfdfc] p-4"><p className="eyebrow">User experience</p><p className="mt-3 whitespace-pre-wrap text-sm leading-7">{submission.experience}</p></div>
+    <div className="mt-6 grid gap-4 sm:grid-cols-2"><Info label="Submitted" value={formatDate(submission.createdAt)} /><Info label="Instagram account" value={submission.instagramHandle || "civicshield ai"} /><Info label="Location" value={submission.locationLabel || "Not captured"} /><Info label="Coordinates" value={coordinateText(submission.latitude, submission.longitude)} /><Info label="Media" value={`${submission.mediaCount} file(s): ${submission.mediaTypes.length ? submission.mediaTypes.join(", ") : "none"}`} /><Info label="Safety note" value={submission.aiSafetyNote || "No safety note generated."} /></div>
+    {mapsUrl ? <MapLink href={mapsUrl} label="Open submission location" /> : null}
+    <CivicSenseMediaReview submission={submission} />
+    <div className="mt-6 rounded-2xl border border-[#cbe8dd] bg-[#effaf5] p-4"><p className="eyebrow">AI generated caption</p><p className="mt-3 text-sm leading-7">{submission.aiCaption}</p><div className="mt-4 flex flex-wrap gap-2">{submission.aiHashtags.map((tag) => <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-brand" key={tag}>{tag}</span>)}</div></div>
+    <div className="mt-6 flex flex-wrap gap-2 border-t border-line pt-6"><Button variant="outline" onClick={() => setReviewOpen(true)}><Sparkles size={16} /> Approve for Instagram</Button><Button onClick={() => onStatusChange(submission.id, "posted")}><CheckCircle2 size={16} /> Mark posted</Button><Button variant="danger" onClick={() => onStatusChange(submission.id, "rejected")}><Trash2 size={16} /> Reject</Button></div>
+    {publishMessage ? <p className="mt-3 rounded-xl bg-brand-soft px-3 py-2 text-sm font-semibold text-brand">{publishMessage}</p> : null}
+    <p className="mt-3 text-xs leading-5 text-muted">Text-only and voice-only posts use the configured CivicShield default image. Video submissions publish as Instagram Reels when the stored video URL is public.</p>
+    {reviewOpen ? <InstagramReviewDialog publishing={publishing} submission={submission} onCancel={() => setReviewOpen(false)} onProceed={() => void proceedToPublish()} /> : null}
+  </>;
+}
+
+function CivicSenseMediaReview({ submission }: { submission: CivicSenseSubmission }) {
+  if (!submission.mediaUrls.length) return <div className="mt-6 rounded-2xl border border-[#ead9b8] bg-[#fffaf0] p-4 text-sm leading-6 text-[#725019]"><p className="font-bold">Post media</p><p className="mt-1">No media was stored for this submission. Instagram publishing will use the configured CivicShield default image with the generated caption.</p></div>;
+  return <div className="mt-6 rounded-2xl border border-line bg-[#fbfdfc] p-4"><p className="eyebrow">Stored media preview</p><div className="mt-3 grid gap-3 sm:grid-cols-2">{submission.mediaUrls.map((url, index) => {
+    const type = submission.mediaTypes[index] ?? "";
+    return <div className="rounded-2xl border border-line bg-white p-3" key={`${url}-${index}`}><p className="mb-2 truncate text-xs font-bold text-muted">{type || "media file"}</p>{type.startsWith("video/") ? <video className="aspect-video w-full rounded-xl bg-[#101a18] object-cover" controls src={url} /> : type.startsWith("audio/") ? <audio className="w-full" controls src={url} /> : <a className="text-sm font-bold text-brand underline underline-offset-4" href={url} target="_blank" rel="noreferrer">Open media</a>}</div>;
+  })}</div></div>;
+}
+
+function InstagramReviewDialog({ publishing, submission, onCancel, onProceed }: { publishing: boolean; submission: CivicSenseSubmission; onCancel: () => void; onProceed: () => void }) {
+  const videoIndex = submission.mediaTypes.findIndex((type) => type.startsWith("video/"));
+  const hasVideo = videoIndex >= 0 && Boolean(submission.mediaUrls[videoIndex]);
+  const caption = [submission.aiCaption, submission.aiHashtags.join(" ")].filter(Boolean).join("\n\n");
+  return <div className="fixed inset-0 z-50 grid place-items-center bg-[#132421]/60 p-5" role="dialog" aria-modal="true" aria-labelledby="instagram-review-title">
+    <Card className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl shadow-surface"><CardContent className="p-6 sm:p-7">
+      <div className="flex items-start justify-between gap-4"><div><p className="eyebrow">Final Instagram review</p><h2 className="mt-2 font-display text-2xl font-bold" id="instagram-review-title">Approve and upload {submission.id}</h2><p className="mt-2 text-sm leading-6 text-muted">{hasVideo ? "This will publish the stored video as a Reel." : "This will publish the configured CivicShield default image with the generated caption."}</p></div><button className="grid size-10 place-items-center rounded-xl border border-line" type="button" onClick={onCancel} aria-label="Close Instagram review"><X size={18} /></button></div>
+      <div className="mt-6 grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+        <div className="rounded-3xl border border-line bg-[#fbfdfc] p-4">
+          <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted">Media to publish</p>
+          {hasVideo ? <video className="mt-3 aspect-[9/16] max-h-[28rem] w-full rounded-2xl bg-[#101a18] object-cover" controls src={submission.mediaUrls[videoIndex]} /> : <div className="mt-3 grid aspect-square place-items-center rounded-2xl border border-[#cbe8dd] bg-[#effaf5] p-6 text-center"><div><Sparkles className="mx-auto text-brand" size={34} /><p className="mt-4 font-display text-2xl font-bold">CivicShield AI</p><p className="mt-2 text-sm text-muted">{submission.aiCategory || "Civic awareness"}</p></div></div>}
+        </div>
+        <div className="rounded-3xl border border-[#cbe8dd] bg-[#effaf5] p-4">
+          <p className="text-xs font-bold uppercase tracking-[0.1em] text-brand">Caption</p>
+          <p className="mt-3 whitespace-pre-wrap text-sm leading-7">{caption}</p>
+          <div className="mt-5 grid gap-3 text-sm"><Info label="Location" value={submission.locationLabel || "Not captured"} /><Info label="Safety review" value={submission.aiSafetyNote || "Review media for privacy before posting."} /></div>
+        </div>
+      </div>
+      <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><Button variant="outline" disabled={publishing} onClick={onCancel}>Cancel</Button><Button disabled={publishing} onClick={onProceed}><Sparkles size={16} /> {publishing ? "Uploading..." : "Proceed to upload"}</Button></div>
+    </CardContent></Card>
+  </div>;
 }
 
 function EmergencyModeration({ reports, selected, selectedIds, onDelete, onSelect, onSelectionChange }: { reports: EmergencyReport[]; selected: EmergencyReport | null; selectedIds: string[]; onDelete: (ids: string[]) => void; onSelect: (report: EmergencyReport) => void; onSelectionChange: (ids: string[]) => void }) {
@@ -235,6 +350,7 @@ function DeleteDialog({ kind, reportCount, deleting, onCancel, onDelete }: { kin
 }
 
 function TabButton({ active, children, onClick }: { active: boolean; children: React.ReactNode; onClick: () => void }) { return <button className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition ${active ? "bg-white text-ink shadow-sm" : "text-muted hover:text-ink"}`} onClick={onClick} type="button">{children}</button>; }
+function CivicSenseStatusBadge({ status }: { status: CivicSenseStatus }) { const tone = status === "posted" ? "safe" : status === "rejected" ? "urgent" : status === "approved" ? "caution" : "neutral"; return <Badge tone={tone}>{status.replaceAll("-", " ")}</Badge>; }
 function Metric({ label, tone = "brand", value }: { label: string; tone?: "brand" | "danger" | "women"; value: string }) { const color = tone === "danger" ? "text-danger" : tone === "women" ? "text-[#a22a58]" : "text-brand"; return <div className="rounded-2xl border border-line bg-[#fbfdfc] p-4"><p className="min-h-10 text-xs font-bold uppercase leading-5 tracking-[0.1em] text-muted">{label}</p><p className={`mt-2 font-display text-3xl font-bold ${color}`}>{value}</p></div>; }
 function Info({ label, value }: { label: string; value: string }) { return <div><p className="text-xs font-bold uppercase tracking-[0.1em] text-muted">{label}</p><p className="mt-1 whitespace-pre-wrap text-sm leading-6">{value}</p></div>; }
 function EmptyState({ detail, icon, title }: { detail: string; icon: React.ReactNode; title: string }) { return <div className="grid min-h-72 place-items-center text-center"><div>{icon}<p className="mt-4 font-display text-xl font-bold">{title}</p><p className="mt-2 text-sm text-muted">{detail}</p></div></div>; }

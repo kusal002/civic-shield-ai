@@ -57,15 +57,43 @@ create table if not exists public.community_verifications (
   unique (report_id, client_token)
 );
 
+create table if not exists public.civic_sense_submissions (
+  id bigint generated always as identity primary key,
+  submission_id text unique not null,
+  experience text not null,
+  location_label text,
+  latitude double precision,
+  longitude double precision,
+  media_count integer not null default 0 check (media_count >= 0),
+  media_types text[] not null default '{}',
+  media_urls text[] not null default '{}',
+  ai_caption text not null,
+  ai_category text not null,
+  ai_hashtags text[] not null default '{}',
+  ai_safety_note text not null,
+  status text not null default 'needs-review' check (status in ('needs-review', 'approved', 'posted', 'rejected')),
+  instagram_handle text,
+  instagram_media_id text,
+  instagram_post_url text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.civic_sense_submissions add column if not exists media_urls text[] not null default '{}';
+alter table public.civic_sense_submissions add column if not exists instagram_media_id text;
+alter table public.civic_sense_submissions add column if not exists instagram_post_url text;
+
 create index if not exists civic_reports_public_created_idx on public.civic_reports (public_visible, created_at desc);
 create index if not exists report_status_events_report_idx on public.report_status_events (report_id, created_at desc);
 create index if not exists emergency_reports_public_created_idx on public.emergency_reports (public_visible, created_at desc);
 create index if not exists community_verifications_report_idx on public.community_verifications (report_id, created_at desc);
+create index if not exists civic_sense_submissions_created_idx on public.civic_sense_submissions (status, created_at desc);
 
 alter table public.civic_reports enable row level security;
 alter table public.report_status_events enable row level security;
 alter table public.emergency_reports enable row level security;
 alter table public.community_verifications enable row level security;
+alter table public.civic_sense_submissions enable row level security;
 
 -- No anon/authenticated policies by design. Only server code using the service-role key
 -- can read or write rows. Do not add a broad public select policy.

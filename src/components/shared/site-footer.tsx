@@ -25,7 +25,7 @@ export function SiteFooter() {
           CivicShield AI
         </Link>
         <p className="mt-3 max-w-md text-sm leading-6 text-muted">A hackathon project for clearer civic reporting, transparent follow-up, and safety-first action.</p>
-        <Link href="/moderator" className="mt-4 inline-flex rounded-lg text-sm font-bold text-brand underline underline-offset-4 hover:text-[#045548]">Moderator / admin sign in</Link>
+        <Link href="/moderator" target="_blank" rel="noreferrer" className="mt-4 inline-flex rounded-lg text-sm font-bold text-brand underline underline-offset-4 hover:text-[#045548]">Moderator / admin sign in</Link>
       </div>
       <div className="space-y-5">
         {team.map((member) => <section key={member.email}>

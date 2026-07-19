@@ -84,6 +84,12 @@ export async function updateCivicSenseStatus(submissionId: string, status: Civic
   if (error) throw new Error(error.message);
 }
 
+export async function deleteCivicSenseSubmission(submissionId: string) {
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase.from("civic_sense_submissions").delete().eq("submission_id", submissionId);
+  if (error) throw new Error(error.message);
+}
+
 export async function updateCivicSenseMediaUrls(submissionId: string, mediaUrls: string[]) {
   const supabase = getSupabaseAdmin();
   const { error } = await supabase.from("civic_sense_submissions")

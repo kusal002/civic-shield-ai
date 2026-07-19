@@ -1,6 +1,7 @@
 "use client";
 
 import { Building2, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, ExternalLink, Eye, Filter, MapPin, RefreshCw, ShieldAlert, ShieldCheck, Sparkles, Trash2, Venus, X } from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -122,6 +123,19 @@ export function ModeratorWorkspace() {
     return payload;
   }
 
+  async function deleteCivicSenseSubmissionById(submissionId: string) {
+    try {
+      const response = await fetch(`/api/moderator/civic-sense/${encodeURIComponent(submissionId)}`, { method: "DELETE" });
+      const payload = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "Civic Sense delete failed.");
+      setMessage(`Civic Sense post ${submissionId} deleted.`);
+      setSelectedCivicSense(null);
+      await loadReports();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Civic Sense delete failed.");
+    }
+  }
+
   async function confirmDelete() {
     if (!deleteRequest) return;
     setDeleting(true);
@@ -156,7 +170,10 @@ export function ModeratorWorkspace() {
   return <>
     <main className="min-h-screen bg-canvas p-6 text-ink sm:p-10">
       <div className="mx-auto max-w-7xl">
-        <p className="eyebrow">Protected workspace</p>
+        <Link className="inline-flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-sm font-bold text-brand transition hover:bg-brand-soft" href="/">
+          <ChevronLeft size={16} /> Back to home
+        </Link>
+        <p className="eyebrow mt-6">Protected workspace</p>
         <h1 className="mt-3 flex items-center gap-2 font-display text-3xl font-bold"><ShieldCheck className="text-brand" /> Moderator controls</h1>
         {!signedIn ? <LoginCard accessKey={accessKey} message={message} onChange={setAccessKey} onLogin={() => void login()} /> : <div className="mt-6">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-line bg-surface p-3">
@@ -170,6 +187,7 @@ export function ModeratorWorkspace() {
           {activeTab === "emergency" ? <EmergencyModeration reports={emergencyReports} selected={selectedEmergency} selectedIds={emergencySelection} onDelete={(ids) => setDeleteRequest({ kind: "emergency", ids })} onSelect={setSelectedEmergency} onSelectionChange={setEmergencySelection} /> : activeTab === "civic-sense" ? <CivicSenseModeration
             selected={selectedCivicSense}
             submissions={civicSenseSubmissions}
+            onDelete={(submissionId) => void deleteCivicSenseSubmissionById(submissionId)}
             onSelect={setSelectedCivicSense}
             onPublish={(submissionId) => publishCivicSenseToInstagram(submissionId)}
             onStatusChange={(submissionId, nextStatus) => void updateCivicSenseSubmissionStatus(submissionId, nextStatus)}
@@ -189,10 +207,10 @@ export function ModeratorWorkspace() {
 }
 
 function LoginCard({ accessKey, message, onChange, onLogin }: { accessKey: string; message: string; onChange: (value: string) => void; onLogin: () => void }) {
-  return <Card className="mt-6 max-w-xl rounded-3xl"><CardContent className="p-6"><p className="text-sm leading-6 text-muted">Sign in with the server-configured moderator access key.</p><input className="mt-5 h-12 w-full rounded-xl border border-line px-3" type="password" value={accessKey} onChange={(event) => onChange(event.target.value)} placeholder="Moderator access key" /><Button className="mt-3" onClick={onLogin}>Sign in</Button>{message ? <p className="mt-4 text-sm font-semibold text-danger">{message}</p> : null}</CardContent></Card>;
+  return <Card className="mt-6 max-w-xl rounded-3xl"><CardContent className="p-6"><div className="rounded-2xl border border-[#ead9b8] bg-[#fffaf0] p-4 text-sm leading-6 text-[#725019]"><p className="font-bold text-[#573a0c]">Internal team access only</p><p className="mt-1">This sign-in is for CivicShield moderators reviewing reports, emergency records, and social-awareness posts. Public users do not need moderator access.</p></div><p className="mt-5 text-sm leading-6 text-muted">Sign in with the server-configured moderator access key.</p><input className="mt-4 h-12 w-full rounded-xl border border-line px-3" type="password" value={accessKey} onChange={(event) => onChange(event.target.value)} placeholder="Moderator access key" /><Button className="mt-3" onClick={onLogin}>Sign in</Button>{message ? <p className="mt-4 text-sm font-semibold text-danger">{message}</p> : null}</CardContent></Card>;
 }
 
-function CivicSenseModeration({ selected, submissions, onPublish, onSelect, onStatusChange }: { selected: CivicSenseSubmission | null; submissions: CivicSenseSubmission[]; onPublish: (submissionId: string) => Promise<{ instagramMediaId?: string; postUrl?: string | null }>; onSelect: (submission: CivicSenseSubmission) => void; onStatusChange: (submissionId: string, status: CivicSenseStatus) => void }) {
+function CivicSenseModeration({ selected, submissions, onDelete, onPublish, onSelect, onStatusChange }: { selected: CivicSenseSubmission | null; submissions: CivicSenseSubmission[]; onDelete: (submissionId: string) => void; onPublish: (submissionId: string) => Promise<{ instagramMediaId?: string; postUrl?: string | null }>; onSelect: (submission: CivicSenseSubmission) => void; onStatusChange: (submissionId: string, status: CivicSenseStatus) => void }) {
   const needsReview = submissions.filter((submission) => submission.status === "needs-review").length;
   const approved = submissions.filter((submission) => submission.status === "approved").length;
   const sorted = useMemo(() => [...submissions].sort((first, second) => new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime()), [submissions]);
@@ -200,7 +218,7 @@ function CivicSenseModeration({ selected, submissions, onPublish, onSelect, onSt
     <Card className="rounded-3xl"><CardContent className="p-5">
       <div className="grid gap-3 sm:grid-cols-3"><Metric label="Total posts" value={String(submissions.length)} /><Metric label="Needs review" value={String(needsReview)} tone="danger" /><Metric label="Approved" value={String(approved)} /></div>
       <div className="mt-5"><p className="font-display text-xl font-bold">Civic Sense queue</p><p className="mt-1 text-sm text-muted">Newest public-awareness submissions for Instagram review.</p></div>
-      <div className="mt-5 max-h-[34rem] space-y-2 overflow-y-auto pr-1">{sorted.length ? sorted.map((submission) => <button className={`w-full rounded-2xl border p-3 text-left transition ${selected?.id === submission.id ? "border-brand bg-brand-soft" : "border-line bg-[#fbfdfc] hover:border-brand/40"}`} key={submission.id} type="button" onClick={() => onSelect(submission)}><div className="flex items-center justify-between gap-2"><span className="font-mono text-xs font-bold text-brand">{submission.id}</span><CivicSenseStatusBadge status={submission.status} /></div><p className="mt-2 text-sm font-bold">{submission.aiCategory || "Public civic sense"}</p><p className="mt-1 line-clamp-2 text-xs leading-5 text-muted">{submission.experience}</p><p className="mt-2 text-xs font-semibold text-muted">{submission.locationLabel || "Location not captured"} · {formatDate(submission.createdAt)}</p></button>) : <p className="rounded-xl bg-[#fbfdfc] p-4 text-sm text-muted">No Civic Sense posts have been submitted yet.</p>}</div>
+      <div className="mt-5 max-h-[34rem] space-y-2 overflow-y-auto pr-1">{sorted.length ? sorted.map((submission) => <article className={`rounded-2xl border p-3 transition ${selected?.id === submission.id ? "border-brand bg-brand-soft" : "border-line bg-[#fbfdfc] hover:border-brand/40"}`} key={submission.id}><button className="w-full text-left" type="button" onClick={() => onSelect(submission)}><div className="flex items-center justify-between gap-2"><span className="font-mono text-xs font-bold text-brand">{submission.id}</span><CivicSenseStatusBadge status={submission.status} /></div><p className="mt-2 text-sm font-bold">{submission.aiCategory || "Public civic sense"}</p><p className="mt-1 line-clamp-2 text-xs leading-5 text-muted">{submission.experience}</p><p className="mt-2 text-xs font-semibold text-muted">{submission.locationLabel || "Location not captured"} · {formatDate(submission.createdAt)}</p></button><div className="mt-3 flex justify-end"><Button size="sm" variant="danger" onClick={() => onDelete(submission.id)}><Trash2 size={14} /> Delete</Button></div></article>) : <p className="rounded-xl bg-[#fbfdfc] p-4 text-sm text-muted">No Civic Sense posts have been submitted yet.</p>}</div>
     </CardContent></Card>
     <Card className="rounded-3xl"><CardContent className="p-6 sm:p-7">{selected ? <CivicSenseDetail submission={selected} onPublish={onPublish} onStatusChange={onStatusChange} /> : <EmptyState icon={<Sparkles className="mx-auto text-brand" size={30} />} title="Select a Civic Sense post" detail="Review the citizen story, AI caption, hashtags, media summary, and posting status." />}</CardContent></Card>
   </div>;

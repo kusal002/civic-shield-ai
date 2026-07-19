@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 
 type Coordinates = { latitude: number; longitude: number };
 type RecordingMode = "audio" | "video" | null;
+type CameraFacing = "environment" | "user";
 
 const maxMediaFiles = 2;
 const maxRecordingMs = 30000;
@@ -22,11 +23,13 @@ export function CivicSenseFab() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<{ id: string; handle: string } | null>(null);
   const [consent, setConsent] = useState(false);
+  const [cameraFacing, setCameraFacing] = useState<CameraFacing>("environment");
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
   const stopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveRecordingRef = useRef(true);
 
   useEffect(() => {
     if (!open || !navigator.geolocation) return;
@@ -52,26 +55,57 @@ export function CivicSenseFab() {
     videoPreviewRef.current.srcObject = recordingMode === "video" ? streamRef.current : null;
   }, [recordingMode]);
 
-  useEffect(() => () => stopRecording(), []);
+  useEffect(() => () => cleanupRecording(false), []);
 
-  function addFiles(files: FileList | null) {
+  async function addFiles(files: FileList | null) {
     if (!files) return;
-    const supported = Array.from(files).filter((file) => file.type.startsWith("video/") || file.type.startsWith("audio/"));
-    setMedia((current) => [...current, ...supported].slice(0, maxMediaFiles));
+    const next: File[] = [];
+    for (const file of Array.from(files)) {
+      if (!file.type.startsWith("video/") && !file.type.startsWith("audio/")) continue;
+      if (file.type.startsWith("video/")) {
+        const duration = await getVideoDuration(file).catch(() => null);
+        if (duration && duration > 30.5) {
+          setStatus(`${file.name} is longer than 30 seconds. Please upload a shorter video.`);
+          continue;
+        }
+      }
+      next.push(file);
+    }
+    setMedia((current) => [...current, ...next].slice(0, maxMediaFiles));
   }
 
   function removeMedia(index: number) {
     setMedia((current) => current.filter((_, itemIndex) => itemIndex !== index));
   }
 
-  function stopRecording() {
+  function cleanupRecording(saveRecording: boolean) {
     if (stopTimerRef.current) clearTimeout(stopTimerRef.current);
     stopTimerRef.current = null;
+    saveRecordingRef.current = saveRecording;
     if (recorderRef.current?.state === "recording") recorderRef.current.stop();
+    recorderRef.current = null;
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     if (videoPreviewRef.current) videoPreviewRef.current.srcObject = null;
     setRecordingMode(null);
+  }
+
+  function stopRecording() {
+    cleanupRecording(true);
+  }
+
+  function closeDialog() {
+    cleanupRecording(false);
+    setExperience("");
+    setMedia([]);
+    setLocation(null);
+    setLocationLabel("");
+    setStatus("");
+    setSubmitting(false);
+    setSuccess(null);
+    setConsent(false);
+    setCameraFacing("environment");
+    setOpen(false);
   }
 
   async function startRecording(mode: Exclude<RecordingMode, null>) {
@@ -80,7 +114,7 @@ export function CivicSenseFab() {
       return;
     }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia(mode === "video" ? { audio: true, video: { facingMode: "environment" } } : { audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia(mode === "video" ? { audio: true, video: { facingMode: cameraFacing } } : { audio: true });
       streamRef.current = stream;
       chunksRef.current = [];
       const recorder = new MediaRecorder(stream);
@@ -89,6 +123,10 @@ export function CivicSenseFab() {
         if (event.data.size > 0) chunksRef.current.push(event.data);
       };
       recorder.onstop = () => {
+        if (!saveRecordingRef.current) {
+          chunksRef.current = [];
+          return;
+        }
         const type = mode === "video" ? "video/webm" : "audio/webm";
         const blob = new Blob(chunksRef.current, { type });
         if (blob.size > 0) {
@@ -96,6 +134,7 @@ export function CivicSenseFab() {
           setMedia((current) => [new File([blob], `civic-sense-${prefix}-${Date.now()}.webm`, { type }), ...current].slice(0, maxMediaFiles));
         }
       };
+      saveRecordingRef.current = true;
       recorder.start();
       setRecordingMode(mode);
       stopTimerRef.current = setTimeout(() => {
@@ -144,23 +183,25 @@ export function CivicSenseFab() {
   return (
     <>
       <button
-        className="fixed bottom-5 right-5 z-40 flex h-14 items-center gap-2 rounded-full bg-[#132421] px-5 text-sm font-bold text-white shadow-[0_18px_40px_rgb(19_36_33_/_25%)] transition hover:-translate-y-1 hover:bg-brand"
+        className="group fixed bottom-5 right-5 z-40 flex h-14 items-center gap-2 rounded-full bg-ink px-5 text-sm font-bold text-white shadow-[0_18px_40px_rgb(19_36_33_/_25%)] transition duration-300 hover:-translate-y-1 hover:bg-brand"
         onClick={() => setOpen(true)}
         type="button"
       >
-        <Sparkles aria-hidden="true" size={18} /> Civic Sense Check
+        <span className="absolute inset-0 -z-10 animate-ping rounded-full bg-brand/25 opacity-60" />
+        <span className="absolute inset-0 -z-10 rounded-full bg-ink transition group-hover:bg-brand" />
+        <Sparkles aria-hidden="true" className="animate-pulse" size={18} /> Zero Civic Sense
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 grid place-items-end bg-[#132421]/55 p-3 sm:place-items-center sm:p-5">
+        <div className="fixed inset-0 z-50 grid place-items-end bg-ink/55 p-3 sm:place-items-center sm:p-5">
           <section className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white shadow-surface">
             <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-line bg-white p-5">
               <div>
                 <p className="eyebrow">Civic Sense Check</p>
-                <h2 className="mt-2 font-display text-2xl font-bold">Share a public awareness moment</h2>
+                <h2 className="mt-2 font-display text-2xl font-bold">Share a Zero Civic Sense moment</h2>
                 <p className="mt-2 text-sm leading-6 text-muted">Record, upload, or describe what you saw. CivicShield will review it before posting.</p>
               </div>
-              <button className="grid size-10 place-items-center rounded-xl border border-line" onClick={() => { stopRecording(); setOpen(false); }} type="button" aria-label="Close">
+              <button className="grid size-10 place-items-center rounded-xl border border-line" onClick={closeDialog} type="button" aria-label="Close">
                 <X size={18} />
               </button>
             </div>
@@ -170,7 +211,7 @@ export function CivicSenseFab() {
                 <div className="rounded-3xl border border-[#cbe8dd] bg-[#effaf5] p-6 text-[#31544b]">
                   <p className="font-display text-2xl font-bold">CivicShield team received your post.</p>
                   <p className="mt-3 leading-7">We will review it and post it soon from {success.handle}. Your reference is <strong>{success.id}</strong>.</p>
-                  <Button className="mt-5" onClick={() => { setSuccess(null); setOpen(false); }}>Done</Button>
+                  <Button className="mt-5" onClick={closeDialog}>Done</Button>
                 </div>
               ) : (
                 <>
@@ -189,13 +230,24 @@ export function CivicSenseFab() {
                     </div>
                   ) : null}
 
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-[#fbfdfc] p-3">
+                    <div>
+                      <p className="text-sm font-bold text-ink">Video camera</p>
+                      <p className="text-xs text-muted">Choose front or back camera before recording.</p>
+                    </div>
+                    <div className="flex rounded-xl bg-white p-1">
+                      <button className={`rounded-lg px-3 py-1.5 text-xs font-bold ${cameraFacing === "environment" ? "bg-brand text-white" : "text-muted"}`} type="button" onClick={() => setCameraFacing("environment")}>Back</button>
+                      <button className={`rounded-lg px-3 py-1.5 text-xs font-bold ${cameraFacing === "user" ? "bg-brand text-white" : "text-muted"}`} type="button" onClick={() => setCameraFacing("user")}>Front</button>
+                    </div>
+                  </div>
+
                   <div className="grid gap-3 sm:grid-cols-3">
                     <button className={`inline-flex h-12 items-center justify-center gap-2 rounded-2xl text-sm font-bold ${recordingMode === "video" ? "bg-danger text-white" : "border border-line bg-[#fbfdfc]"}`} type="button" onClick={() => void startRecording("video")}>
                       <Video size={16} /> {recordingMode === "video" ? "Stop video" : "Record video"}
                     </button>
                     <label className="inline-flex h-12 cursor-pointer items-center justify-center gap-2 rounded-2xl border border-line bg-[#fbfdfc] text-sm font-bold">
                       <Upload size={16} /> Upload media
-                      <input className="sr-only" type="file" accept="video/*,audio/*" multiple onChange={(event) => addFiles(event.target.files)} />
+                      <input className="sr-only" type="file" accept="video/*,audio/*" multiple onChange={(event) => void addFiles(event.target.files)} />
                     </label>
                     <button className={`inline-flex h-12 items-center justify-center gap-2 rounded-2xl text-sm font-bold ${recordingMode === "audio" ? "bg-danger text-white" : "border border-line bg-[#fbfdfc]"}`} type="button" onClick={() => void startRecording("audio")}>
                       {recordingMode === "audio" ? <Pause size={16} /> : <Mic size={16} />} {recordingMode === "audio" ? "Stop voice" : "Record voice"}
@@ -209,7 +261,7 @@ export function CivicSenseFab() {
                   </div>
 
                   <label className="flex gap-3 rounded-2xl border border-[#ead9b8] bg-[#fffaf0] p-4 text-sm leading-6 text-[#725019]">
-                    <input className="mt-1 size-4 accent-[#076b5a]" type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />
+                    <input className="mt-1 size-4 accent-brand" type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />
                     I understand CivicShield will review this before posting and I should not include private faces, minors, license plates, or personal attacks.
                   </label>
 
@@ -252,4 +304,21 @@ function MediaPreview({ file, index, onRemove }: { file: File; index: number; on
       ) : null}
     </div>
   );
+}
+
+function getVideoDuration(file: File) {
+  return new Promise<number>((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.onloadedmetadata = () => {
+      URL.revokeObjectURL(url);
+      resolve(video.duration);
+    };
+    video.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not read video duration."));
+    };
+    video.src = url;
+  });
 }

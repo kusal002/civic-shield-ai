@@ -67,7 +67,7 @@ export default function Home() {
             Why CivicShield
           </a>
           <Link className="transition-colors hover:text-brand" href="/dashboard">Public dashboard</Link>
-          <Link className="transition-colors hover:text-brand" href="/moderator">Moderator sign in</Link>
+          <Link className="transition-colors hover:text-brand" href="/moderator" target="_blank" rel="noreferrer">Moderator sign in</Link>
         </nav>
 
         <Button asChild className="hidden sm:inline-flex" size="sm">
